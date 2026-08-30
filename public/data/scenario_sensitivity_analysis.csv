@@ -1,0 +1,10 @@
+﻿corridor_id,destination_name,destination_commune_old,corridor_evidence_type,rank_baseline,rank_equity_first,rank_efficiency_first,rank_safety_first,rank_mean,rank_std_dev,top3_scenario_count,robustness_label
+HF001_HF004,Trạm Y tế xã Ngối Cáy,Ngối Cáy,PUBLISHED_SANDBOX_MEDICAL_CORRIDOR,1,2,1,1,1.25,0.43,4,ROBUST_TOP3
+HF001_HF003,Trạm Y tế xã Mường Đăng,Mường Đăng,PUBLISHED_SANDBOX_MEDICAL_CORRIDOR,2,3,2,2,2.25,0.43,4,ROBUST_TOP3
+HF001_HF010,Trạm Y tế xã Búng Lao,Búng Lao,SKYBRIDGE_EXPANSION_CANDIDATE,3,1,3,3,2.5,0.87,4,ROBUST_TOP3
+HF001_HF009,Trạm Y tế xã Mường Lạn,Mường Lạn,SKYBRIDGE_EXPANSION_CANDIDATE,4,5,4,4,4.25,0.43,0,LOW
+HF001_HF008,Trạm Y tế xã Xuân Lao,Xuân Lao,SKYBRIDGE_EXPANSION_CANDIDATE,5,4,5,8,5.5,1.5,0,LOW
+HF001_HF007,Trạm Y tế xã Nặm Lịch,Nặm Lịch,SKYBRIDGE_EXPANSION_CANDIDATE,6,8,6,5,6.25,1.09,0,LOW
+HF001_HF005,Trạm Y tế xã Ẳng Cang,Ẳng Cang,SKYBRIDGE_EXPANSION_CANDIDATE,7,6,8,6,6.75,0.83,0,LOW
+HF001_HF002,Trạm Y tế xã Ẳng Tở,Ẳng Tở,PUBLISHED_SANDBOX_MEDICAL_CORRIDOR,8,7,7,7,7.25,0.43,0,LOW
+HF001_HF006,Trạm Y tế xã Ẳng Nưa,Ẳng Nưa,SKYBRIDGE_EXPANSION_CANDIDATE,9,9,9,9,9.0,0.0,0,LOW
