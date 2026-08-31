@@ -1,0 +1,11 @@
+﻿facility_id,facility_name,facility_type,commune_old,address,latitude,longitude,coordinate_status,coordinate_source,verification_status,notes
+HF001,Trung tâm Y tế Mường Ảng,District Medical Center,Mường Ảng,"TDP 3, Mường Ảng",21.51969,103.21744,present,raw_csv; provenance_not_provided,within_study_area_bounds_unverified_source,
+HF002,Trạm Y tế xã Ẳng Tở,Commune Health Station,Ẳng Tở,Bản Bua 1,21.53031,103.24294,present,raw_csv; provenance_not_provided,within_study_area_bounds_unverified_source,
+HF003,Trạm Y tế xã Mường Đăng,Commune Health Station,Mường Đăng,Bản Co Muông,21.56144,103.18194,present,raw_csv; provenance_not_provided,within_study_area_bounds_unverified_source,
+HF004,Trạm Y tế xã Ngối Cáy,Commune Health Station,Ngối Cáy,Bản Cáy,21.58294,103.21444,present,raw_csv; provenance_not_provided,within_study_area_bounds_unverified_source,
+HF005,Trạm Y tế xã Ẳng Cang,Commune Health Station,Ẳng Cang,Bản Huổi Sứa,21.50519,103.23869,present,raw_csv; provenance_not_provided,within_study_area_bounds_unverified_source,
+HF006,Trạm Y tế xã Ẳng Nưa,Commune Health Station,Ẳng Nưa,Bản Co Hắm,21.5147549,103.1935133,fallback_centroid,outputs/person_a_data/commune_master.csv centroid,fallback_requires_manual_verification,coordinates missing; do not fill without separately verified source | Exact coordinate missing in uploaded file; commune centroid used for MVP only.
+HF007,Trạm Y tế xã Nặm Lịch,Commune Health Station,Nặm Lịch,Bản Lịch Cang,21.47781,103.27281,present,raw_csv; provenance_not_provided,within_study_area_bounds_unverified_source,
+HF008,Trạm Y tế xã Xuân Lao,Commune Health Station,Xuân Lao,Bản Chiềng Lao,21.46444,103.34244,present,raw_csv; provenance_not_provided,within_study_area_bounds_unverified_source,
+HF009,Trạm Y tế xã Mường Lạn,Commune Health Station,Mường Lạn,Bản Lạn,21.44469,103.29769,present,raw_csv; provenance_not_provided,within_study_area_bounds_unverified_source,
+HF010,Trạm Y tế xã Búng Lao,Commune Health Station,Búng Lao,Bản Quyết Tiến 1,21.51844,103.34931,present,raw_csv; provenance_not_provided,within_study_area_bounds_unverified_source,

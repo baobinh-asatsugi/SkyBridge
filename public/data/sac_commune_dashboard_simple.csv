@@ -1,0 +1,11 @@
+﻿commune,province,district,gap_level,time_band,nearest_facility,commune_unit,lat,lon,pop_2023,pop_2020_ref,rank_gap,access_gap,road_time_min,road_dist_km,road_len_km,area_km2,road_density,isolation,facility_count,outside_30_flag,outside_60_flag,pop_outside_30,pop_outside_60
+Xuân Lao,Điện Biên,Mường Ảng,Very High Gap,Outside 60 min,Trung tâm Y tế Mường Ảng,1,21.4549,103.3605,5416.66,5661.66,1,0.9934,70.6,24.868,35.12,54.7805,0.641,1,1,1,1,5416.66,5416.66
+Búng Lao,Điện Biên,Mường Ảng,Very High Gap,Outside 60 min,Trung tâm Y tế Mường Ảng,1,21.5254,103.314,8354.76,8732.65,2,0.9834,71.3,20.63,50.43,52.6323,0.9582,0.9526,1,1,1,8354.76,8354.76
+Ngối Cáy,Điện Biên,Mường Ảng,Very High Gap,Outside 60 min,Trung tâm Y tế Mường Ảng,1,21.596,103.2153,2591.24,2708.44,3,0.9479,67,21.003,45.07,52.3722,0.8605,0.9672,1,1,1,2591.24,2591.24
+Mường Đăng,Điện Biên,Mường Ảng,Very High Gap,Outside 60 min,Trung tâm Y tế Mường Ảng,1,21.5797,103.156,3843.85,4017.71,4,0.8666,60.4,16.588,75.18,61.4806,1.2229,0.913,1,1,1,3843.85,3843.85
+Mường Lạn,Điện Biên,Mường Ảng,Very High Gap,Outside 60 min,Trung tâm Y tế Mường Ảng,1,21.4431,103.2917,3305.77,3455.29,5,0.8601,61.1,24.456,59.65,40.5116,1.4724,0.8757,1,1,1,3305.77,3305.77
+Nặm Lịch,Điện Biên,Mường Ảng,Very High Gap,30-60 min,Trung tâm Y tế Mường Ảng,1,21.4649,103.2625,2147.57,2244.71,6,0.7508,49,16.276,49.34,35.82,1.3774,0.8899,1,1,0,2147.57,0
+Ẳng Cang,Điện Biên,Mường Ảng,High Gap,30-60 min,Trung tâm Y tế Mường Ảng,1,21.479,103.2236,9833.38,10278.15,7,0.6985,47.5,13.996,114.53,54.3783,2.1062,0.7809,1,1,0,9833.38,0
+Ẳng Tở,Điện Biên,Mường Ảng,High Gap,30-60 min,Trung tâm Y tế Mường Ảng,1,21.5626,103.2632,6575.46,6872.87,8,0.6862,40.9,11.605,68.68,59.7858,1.1488,0.9241,1,1,0,6575.46,0
+Ẳng Nưa,Điện Biên,Mường Ảng,Moderate Gap,Within 30 min,Trung tâm Y tế Mường Ảng,1,21.5148,103.1935,4248.92,4441.1,9,0.326,10.8,3.229,64.9,24.9872,2.5975,0.7074,1,0,0,0,0
+Thị trấn Mường Ảng,Điện Biên,Mường Ảng,Lower Gap,Within 30 min,Trung tâm Y tế Mường Ảng,1,21.522,103.2176,4020.83,4202.69,10,0,2.5,0.582,47.31,6.455,7.3284,0,0,0,0,0,0
