@@ -34,7 +34,7 @@ Ngối Cáy is the baseline rank #1 corridor and is classified `LAUNCH`.
 ## Calculations and UI Derivations
 
 - Candidate corridors: count of rows in `final_corridor_priority_dataset.csv`.
-- Launch candidates: count where `final_classification_baseline` is `LAUNCH`.
+- Pilot candidates: count where `final_classification_baseline` is `LAUNCH`.
 - Robust Top-3: count where `top3_scenario_count` from scenario sensitivity is 4.
 - Maximum minutes saved: max of `time_saved_base_min`.
 - Scenario movement: baseline rank minus selected scenario rank.

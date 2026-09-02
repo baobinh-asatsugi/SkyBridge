@@ -19,7 +19,7 @@ async function main() {
     ["03 Prioritization", "03-prioritization.png"],
     ["04 Mission Planner", "04-mission-planner.png"],
     ["05 Scenario Lab", "05-scenario-lab.png"],
-    ["06 Seasonal Operations", "06-seasonal-operations.png"]
+    ["06 Seasonal Readiness", "06-seasonal-readiness.png"]
   ];
 
   for (const [label, file] of screens) {

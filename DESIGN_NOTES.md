@@ -27,7 +27,7 @@ The first screen is map-centric, with a KPI strip, large geographic operating pi
 - Prioritization uses a Need x Feasibility matrix without artificial quadrant thresholds.
 - Mission Planner uses a step workflow but labels outputs as preliminary screening.
 - Scenario Lab uses segmented scenario controls and rank-movement indicators.
-- Seasonal Operations uses a month selector and data-derived seasonal observations without safe/unsafe weather claims.
+- Seasonal Readiness uses a month selector and data-derived seasonal observations without safe/unsafe weather claims.
 
 ## Safety and Scientific Wording
 
