@@ -31,7 +31,7 @@ import {
 import "./styles.css";
 
 const DATA = {
-  corridors: "/data/final_corridor_priority_dataset.csv",
+  corridors: "/data/final_corridor_priority_dataset_terrain_v2_ranked.csv",
   scenarios: "/data/scenario_sensitivity_analysis.csv",
   weather: "/data/weather_risk_monthly.csv",
   health: "/data/health_facilities_clean.csv",
@@ -68,7 +68,7 @@ const pageMeta = {
 };
 
 const contextScreens = new Set(["priority", "scenario", "seasonal"]);
-const priorityScoreTooltip = "Composite screening score combining healthcare need, UAV benefit, preliminary flight feasibility, and operational risk under the displayed decision scenario. Weights are embedded in the supplied scenario score fields.";
+const priorityScoreTooltip = "Composite screening score combining healthcare need, UAV benefit, flight feasibility, and operational risk under the displayed decision scenario. Weights are embedded in the supplied scenario score fields.";
 
 const scenarioFields = {
   Baseline: "rank_baseline",
@@ -123,7 +123,7 @@ const viExact = {
   "UAV mission time": "Thời gian nhiệm vụ UAV",
   "Healthcare Accessibility Need": "Nhu cầu Tiếp cận Y tế",
   "Flight Feasibility": "Khả năng Thực hiện Chuyến bay",
-  "Need x preliminary feasibility": "Nhu cầu x khả thi sơ bộ",
+  "Need x Flight Feasibility": "Nhu cầu x Khả năng Thực hiện Chuyến bay",
   "Decision intelligence": "Thông tin ra quyết định",
   "HIGHEST NEED != HIGHEST DEPLOYMENT PRIORITY": "NHU CẦU CAO NHẤT KHÔNG LUÔN LÀ ƯU TIÊN TRIỂN KHAI CAO NHẤT",
   "Plan mission": "Lập kế hoạch nhiệm vụ",
@@ -186,7 +186,7 @@ const viExact = {
   "Best planning context": "Bối cảnh lập kế hoạch tốt nhất",
   "Higher seasonal caution": "Mức thận trọng cao",
   "Healthcare Need": "Nhu cầu y tế",
-  "Baseline Flight Feasibility": "Khả thi bay cơ sở",
+  "Corridor Terrain Feasibility": "Khả thi Địa hình Tuyến",
   "Baseline Operational Risk": "Rủi ro vận hành cơ sở",
   "Baseline Recommendation": "Khuyến nghị cơ sở",
   "Lower-friction planning window": "Giai đoạn lập kế hoạch ít cản trở",
@@ -274,11 +274,11 @@ const viReplacements = [
   [/kg, recorded for planning context; not used in the current performance model/g, "kg, ghi nhận cho bối cảnh lập kế hoạch; chưa dùng trong mô hình hiệu năng hiện tại"],
   [/Access gap plus population component/g, "Khoảng trống tiếp cận và thành phần dân số"],
   [/Time saved, percentage saved, and detour ratio/g, "Thời gian tiết kiệm, tỷ lệ tiết kiệm và mức vòng đường"],
-  [/Preliminary feasibility score/g, "Điểm khả thi sơ bộ"],
+  [/Corridor terrain feasibility from corrected slope and a 500 m aerial-corridor buffer/g, "Khả thi địa hình tuyến từ độ dốc đã hiệu chỉnh và vùng đệm tuyến bay 500 m"],
   [/Distance, terrain, and climatological risk context/g, "Khoảng cách, địa hình và rủi ro khí hậu"],
   [/Baseline weighted score/g, "Điểm trọng số cơ sở"],
   [/Robust Top-3/g, "Top 3 ổn định"],
-  [/Composite screening score combining healthcare need, UAV benefit, preliminary flight feasibility, and operational risk under the displayed decision scenario\. Weights are embedded in the supplied scenario score fields\./g, "Điểm sàng lọc tổng hợp từ nhu cầu y tế, lợi ích UAV, khả thi bay sơ bộ và rủi ro vận hành theo kịch bản đang hiển thị. Trọng số nằm trong các trường điểm kịch bản đã cung cấp."],
+  [/Composite screening score combining healthcare need, UAV benefit, flight feasibility, and operational risk under the displayed decision scenario\. Weights are embedded in the supplied scenario score fields\./g, "Điểm sàng lọc tổng hợp từ nhu cầu y tế, lợi ích UAV, khả năng thực hiện chuyến bay và rủi ro vận hành theo kịch bản đang hiển thị. Trọng số nằm trong các trường điểm kịch bản đã cung cấp."],
   [/Road distance is modeled from available network analysis, but no route polyline is available\./g, "Quãng đường bộ được mô hình hóa từ phân tích mạng lưới; chưa có đường tuyến chi tiết."],
   [/Candidate aerial distance applies the project aerial route factor\./g, "Khoảng cách đường không áp dụng hệ số tuyến bay của dự án."],
   [/Modeled road travel time from project routing assumptions\./g, "Thời gian đường bộ mô hình hóa theo giả định định tuyến của dự án."],
@@ -286,7 +286,7 @@ const viReplacements = [
   [/Road distance relative to direct path/g, "Quãng đường bộ so với tuyến trực tiếp"],
   [/Modeled direct UAV path/g, "Tuyến UAV trực tiếp mô hình hóa"],
   [/modeled reduction/g, "giảm theo mô hình"],
-  [/Prioritization balances healthcare need, UAV benefit, preliminary feasibility, and operational risk using the project methodology\./g, "Xếp hạng ưu tiên cân bằng nhu cầu y tế, lợi ích UAV, khả thi sơ bộ và rủi ro vận hành theo phương pháp dự án."],
+  [/Prioritization balances healthcare need, UAV benefit, flight feasibility, and operational risk using the project methodology\./g, "Xếp hạng ưu tiên cân bằng nhu cầu y tế, lợi ích UAV, khả năng thực hiện chuyến bay và rủi ro vận hành theo phương pháp dự án."],
   [/Rank #(\d+)/g, "Hạng #$1"],
   [/Recommendation class/g, "Nhóm khuyến nghị"],
   [/Healthcare need/g, "Nhu cầu y tế"],
@@ -336,7 +336,7 @@ const viReplacements = [
   [/corridor priority, scenario sensitivity, monthly weather, health facilities, commune master, access-gap ranking, and UAV assumptions/g, "ưu tiên tuyến, độ nhạy kịch bản, thời tiết tháng, cơ sở y tế, danh mục xã, xếp hạng khoảng trống tiếp cận và giả định UAV"],
   [/Boundary GeoJSON comes from/g, "GeoJSON ranh giới lấy từ"],
   [/Road distance\/time, candidate aerial distance, UAV mission time, minutes saved, percent saved, feasibility, risk, and priority scores are project model outputs\./g, "Quãng đường/thời gian đường bộ, khoảng cách đường không ứng viên, thời gian nhiệm vụ UAV, phút tiết kiệm, phần trăm tiết kiệm, khả thi, rủi ro và điểm ưu tiên là đầu ra mô hình dự án."],
-  [/Healthcare need, UAV benefit, preliminary flight feasibility, operational risk, baseline priority, classification, scenario ranks, and robustness are read from the supplied corridor and scenario files\. UI terms such as Very high, High, Moderate, Limited, and Low are transparent score-band labels for normalized 0-1 values; they do not change the underlying scores\./g, "Nhu cầu y tế, lợi ích UAV, khả thi bay sơ bộ, rủi ro vận hành, ưu tiên cơ sở, phân loại, hạng kịch bản và độ ổn định được đọc từ tệp tuyến và kịch bản đã cung cấp. Các nhãn giao diện là dải điểm minh bạch cho giá trị chuẩn hóa 0-1; không làm đổi điểm gốc."],
+  [/Healthcare need, UAV benefit, corridor terrain feasibility, flight feasibility, operational risk, baseline priority, classification, scenario ranks, and robustness are read from the terrain-v2 ranked corridor file\. Weather remains district-level climatology\. UI terms such as Very high, High, Moderate, Limited, and Low are transparent score-band labels for normalized 0-1 values; they do not change the underlying scores\./g, "Nhu cầu y tế, lợi ích UAV, khả thi địa hình tuyến, khả năng thực hiện chuyến bay, rủi ro vận hành, ưu tiên cơ sở, phân loại, hạng kịch bản và độ ổn định được đọc từ tệp tuyến terrain-v2 đã xếp hạng. Thời tiết vẫn là khí hậu học cấp huyện. Các nhãn giao diện là dải điểm minh bạch cho giá trị chuẩn hóa 0-1; không làm đổi điểm gốc."],
   [/The UAV screen uses the loaded assumption record:/g, "Màn hình UAV dùng bản ghi giả định đã tải:"],
   [/base speed/g, "tốc độ cơ sở"],
   [/aerial route factor/g, "hệ số tuyến bay"],
@@ -351,7 +351,7 @@ const viReplacements = [
   [/starts as rank #(\d+); scenario views compare each corridor against this reference\./g, "bắt đầu ở hạng #$1; các chế độ kịch bản so sánh từng tuyến với mốc này."],
   [/Scenario ranking with greater emphasis on healthcare-access need in the supplied sensitivity scores\./g, "Xếp hạng kịch bản nhấn mạnh hơn nhu cầu tiếp cận y tế trong điểm độ nhạy đã cung cấp."],
   [/Scenario ranking with greater emphasis on modeled UAV\/logistics benefit in the supplied sensitivity scores\./g, "Xếp hạng kịch bản nhấn mạnh hơn lợi ích UAV/logistics mô hình hóa trong điểm độ nhạy đã cung cấp."],
-  [/Scenario ranking with greater emphasis on preliminary feasibility and operational-risk considerations in the supplied sensitivity scores\./g, "Xếp hạng kịch bản nhấn mạnh hơn khả thi sơ bộ và rủi ro vận hành trong điểm độ nhạy đã cung cấp."],
+  [/Scenario ranking with greater emphasis on flight feasibility and operational-risk considerations in the supplied sensitivity scores\./g, "Xếp hạng kịch bản nhấn mạnh hơn khả năng thực hiện chuyến bay và rủi ro vận hành trong điểm độ nhạy đã cung cấp."],
   [/No corridor changes rank relative to Baseline\./g, "Không tuyến nào đổi hạng so với Cơ sở."],
   [/moves #(\d+) to #(\d+) \(([+-]?\d+) positions\)\./g, "dịch chuyển từ #$1 lên #$2 ($3 bậc)."],
   [/remain Top-3 across all four scenarios\./g, "giữ Top 3 trên cả bốn kịch bản."],
@@ -359,12 +359,12 @@ const viReplacements = [
   [/holds rank #(\d+) across all scenarios, indicating a stable modeled priority under the tested objectives\./g, "giữ hạng #$1 trong mọi kịch bản, cho thấy ưu tiên mô hình hóa ổn định theo các mục tiêu đã kiểm tra."],
   [/moves only one rank across scenarios, indicating relatively stable priority under the tested objectives\./g, "chỉ dịch chuyển một hạng giữa các kịch bản, cho thấy ưu tiên tương đối ổn định."],
   [/ranges from #(\d+) under (.+) to #(\d+) under (.+), indicating sensitivity to policy weighting\./g, "dao động từ #$1 theo $2 đến #$3 theo $4, cho thấy nhạy với trọng số chính sách."],
-  [/combines (.+) healthcare need, (.+) modeled UAV benefit, and (.+) preliminary feasibility\./g, "kết hợp nhu cầu y tế $1, lợi ích UAV mô hình hóa $2 và khả thi sơ bộ $3."],
+  [/combines (.+) healthcare need, (.+) modeled UAV benefit, and (.+) flight feasibility\./g, "kết hợp nhu cầu y tế $1, lợi ích UAV mô hình hóa $2 và khả năng thực hiện chuyến bay $3."],
   [/is held for later review because modeled need and benefit do not outweigh screening concerns\./g, "được tạm hoãn rà soát vì nhu cầu và lợi ích mô hình hóa chưa vượt các quan ngại sàng lọc."],
-  [/shows (.+) healthcare need and (.+) UAV benefit, with (.+) feasibility and (.+) operational risk\./g, "có nhu cầu y tế $1 và lợi ích UAV $2, với khả thi $3 và rủi ro vận hành $4."],
-  [/modeled UAV benefit and (.+) preliminary feasibility support the #(\d+) baseline priority, while operational risk remains (.+)\./g, "lợi ích UAV mô hình hóa và khả thi sơ bộ $1 hỗ trợ ưu tiên cơ sở #$2, trong khi rủi ro vận hành ở mức $3."],
+  [/shows (.+) healthcare need and (.+) UAV benefit, with (.+) flight feasibility and (.+) operational risk\./g, "có nhu cầu y tế $1 và lợi ích UAV $2, với khả năng thực hiện chuyến bay $3 và rủi ro vận hành $4."],
+  [/modeled UAV benefit and (.+) flight feasibility support the #(\d+) baseline priority, while operational risk remains (.+)\./g, "lợi ích UAV mô hình hóa và khả năng thực hiện chuyến bay $1 hỗ trợ ưu tiên cơ sở #$2, trong khi rủi ro vận hành ở mức $3."],
   [/healthcare need and (.+) UAV benefit produce a lower baseline priority, so this corridor remains held for further evidence\./g, "nhu cầu y tế và lợi ích UAV $1 tạo ưu tiên cơ sở thấp hơn, nên tuyến này cần thêm bằng chứng."],
-  [/healthcare need and (.+) UAV benefit indicate planning potential, but (.+) feasibility and (.+) operational risk keep the baseline status conditional\./g, "nhu cầu y tế và lợi ích UAV $1 cho thấy tiềm năng lập kế hoạch, nhưng khả thi $2 và rủi ro vận hành $3 khiến trạng thái cơ sở có điều kiện."]
+  [/healthcare need and (.+) UAV benefit indicate planning potential, but (.+) flight feasibility and (.+) operational risk keep the baseline status conditional\./g, "nhu cầu y tế và lợi ích UAV $1 cho thấy tiềm năng lập kế hoạch, nhưng khả năng thực hiện chuyến bay $2 và rủi ro vận hành $3 khiến trạng thái cơ sở có điều kiện."]
 ];
 
 function translateText(text, lang) {
@@ -567,12 +567,12 @@ function recommendationText(c) {
   const feasibility = scoreState(c.flight_feasibility_score).label.toLowerCase();
   const risk = scoreState(c.operational_risk_score, true).label.toLowerCase();
   if (c.final_classification_baseline === "LAUNCH") {
-    return `${c.destination_commune_old} combines ${need} healthcare need, ${benefit} modeled UAV benefit, and ${feasibility} preliminary feasibility.`;
+    return `${c.destination_commune_old} combines ${need} healthcare need, ${benefit} modeled UAV benefit, and ${feasibility} flight feasibility.`;
   }
   if (c.final_classification_baseline === "HOLD") {
     return `${c.destination_commune_old} is held for later review because modeled need and benefit do not outweigh screening concerns.`;
   }
-  return `${c.destination_commune_old} shows ${need} healthcare need and ${benefit} UAV benefit, with ${feasibility} feasibility and ${risk} operational risk.`;
+  return `${c.destination_commune_old} shows ${need} healthcare need and ${benefit} UAV benefit, with ${feasibility} flight feasibility and ${risk} operational risk.`;
 }
 
 function recommendationHeader(c) {
@@ -658,12 +658,12 @@ function whyRecommendation(c) {
   const feasibility = scoreState(c.flight_feasibility_score).label.toLowerCase();
   const risk = scoreState(c.operational_risk_score, true).label.toLowerCase();
   if (c.final_classification_baseline === "LAUNCH") {
-    return `${benefit} modeled UAV benefit and ${feasibility} preliminary feasibility support the #${c.rank_baseline} baseline priority, while operational risk remains ${risk}.`;
+    return `${benefit} modeled UAV benefit and ${feasibility} flight feasibility support the #${c.rank_baseline} baseline priority, while operational risk remains ${risk}.`;
   }
   if (c.final_classification_baseline === "HOLD") {
     return `${need} healthcare need and ${benefit} UAV benefit produce a lower baseline priority, so this corridor remains held for further evidence.`;
   }
-  return `${need} healthcare need and ${benefit} UAV benefit indicate planning potential, but ${feasibility} feasibility and ${risk} operational risk keep the baseline status conditional.`;
+  return `${need} healthcare need and ${benefit} UAV benefit indicate planning potential, but ${feasibility} flight feasibility and ${risk} operational risk keep the baseline status conditional.`;
 }
 
 function scenarioSensitivityText(c) {
@@ -693,7 +693,7 @@ function scenarioWhatChanged(scenario, corridors) {
   const emphasis = {
     "Equity First": "Scenario ranking with greater emphasis on healthcare-access need in the supplied sensitivity scores.",
     "Efficiency First": "Scenario ranking with greater emphasis on modeled UAV/logistics benefit in the supplied sensitivity scores.",
-    "Safety First": "Scenario ranking with greater emphasis on preliminary feasibility and operational-risk considerations in the supplied sensitivity scores."
+    "Safety First": "Scenario ranking with greater emphasis on flight feasibility and operational-risk considerations in the supplied sensitivity scores."
   }[scenario];
   return {
     emphasis,
@@ -740,9 +740,9 @@ function useSkybridgeData() {
           const origin = facilityById.get(item.origin_id) || {};
           const destination = facilityById.get(item.destination_id) || {};
           return {
-            ...item,
             ...scenario,
-            scenario,
+            ...item,
+            scenario: { ...scenario, ...item },
             origin_lat: origin.lat,
             origin_lon: origin.lon,
             destination_lat: destination.lat,
@@ -1109,11 +1109,11 @@ function Prioritization({ data, selected, setSelectedId, setScreen }) {
   return (
     <section className="screen priority-grid">
       <main className="analysis-area">
-        <SectionTitle eyebrow="Decision intelligence" title="Need x preliminary feasibility" />
+        <SectionTitle eyebrow="Decision intelligence" title="Need x Flight Feasibility" />
         <Matrix data={data} selected={selected} setSelectedId={selectFromPriority} labelId={matrixLabelId} clearLabel={() => setMatrixLabelId(null)} />
         <div className="insight-callout">
           <strong>HIGHEST NEED != HIGHEST DEPLOYMENT PRIORITY</strong>
-          <span>Prioritization balances healthcare need, UAV benefit, preliminary feasibility, and operational risk using the project methodology.</span>
+          <span>Prioritization balances healthcare need, UAV benefit, flight feasibility, and operational risk using the project methodology.</span>
         </div>
         <button className="context-action inline" onClick={() => setScreen("planner")}>Plan mission</button>
       </main>
@@ -1450,7 +1450,7 @@ function SeasonalOperations({ data, selected, setSelectedId, setScreen, planning
       <div className="corridor-context-strip">
         <ScorePill label="Healthcare Need" value={fmt(selected.medical_accessibility_need_score, 3)} state={scoreState(selected.medical_accessibility_need_score).label} />
         <ScorePill label="UAV Benefit" value={fmt(selected.uav_benefit_score, 3)} state={scoreState(selected.uav_benefit_score).label} />
-        <ScorePill label="Baseline Flight Feasibility" value={fmt(selected.flight_feasibility_score, 3)} state={scoreState(selected.flight_feasibility_score).label} />
+        <ScorePill label="Flight Feasibility" value={fmt(selected.flight_feasibility_score, 3)} state={scoreState(selected.flight_feasibility_score).label} />
         <ScorePill label="Baseline Operational Risk" value={fmt(selected.operational_risk_score, 3)} state={scoreState(selected.operational_risk_score, true).label} />
         <ScorePill label="Baseline Recommendation" value={displayClass(selected.final_classification_baseline)} state={`Rank #${selected.rank_baseline}`} />
       </div>
@@ -1600,8 +1600,9 @@ function ScoreGrid({ selected, expanded = false }) {
   const scores = [
     ["Healthcare need", selected.medical_accessibility_need_score, "Access gap plus population component", false],
     ["UAV benefit", selected.uav_benefit_score, "Time saved, percentage saved, and detour ratio", false],
-    ["Flight feasibility", selected.flight_feasibility_score, "Preliminary feasibility score", false],
-    ["Operational risk", selected.operational_risk_score, "Distance, terrain, and climatological risk context", true],
+    ["Flight feasibility", selected.flight_feasibility_score, "Combined score using distance, payload, corridor terrain, and district-level weather", false],
+    ["Corridor Terrain Feasibility", selected.terrain_feasibility_score_corridor, "Corridor terrain feasibility from corrected slope and a 500 m aerial-corridor buffer", false],
+    ["Operational risk", selected.operational_risk_score, "Distance, terrain, and district-level climatological risk context", true],
     ["Priority score", selected.priority_score_baseline, "Baseline weighted score", false],
     ["Scenario robustness", `${selected.top3_scenario_count}/4`, selected.robustness_label === "ROBUST_TOP3" ? "Robust Top-3" : selected.robustness_label, false]
   ];
@@ -1631,15 +1632,15 @@ function MethodologyDrawer({ data, onClose }) {
           <Provenance label="Priority score" type="DERIVED / SCENARIO-WEIGHTED" />
         </div>
         <h3>1. Source data</h3>
-        <p>CSV exports from <code>data/SAP data</code>: corridor priority, scenario sensitivity, monthly weather, health facilities, commune master, access-gap ranking, and UAV assumptions. Boundary GeoJSON comes from <code>data/processed/boundaries</code>.</p>
+        <p>Corridor priority is loaded from the terrain-v2 ranked export, with supporting monthly weather, health facilities, commune master, access-gap ranking, and UAV assumptions. Boundary GeoJSON comes from <code>data/processed/boundaries</code>.</p>
         <h3>2. Modeled metrics</h3>
-        <p>Road distance/time, candidate aerial distance, UAV mission time, minutes saved, percent saved, feasibility, risk, and priority scores are project model outputs.</p>
+        <p>Road distance/time, candidate aerial distance, UAV mission time, minutes saved, percent saved, flight feasibility, risk, and priority scores are project model outputs.</p>
         <h3>3. Derived scores</h3>
-        <p>Healthcare need, UAV benefit, preliminary flight feasibility, operational risk, baseline priority, classification, scenario ranks, and robustness are read from the supplied corridor and scenario files. UI terms such as Very high, High, Moderate, Limited, and Low are transparent score-band labels for normalized 0-1 values; they do not change the underlying scores.</p>
+        <p>Healthcare need, UAV benefit, corridor terrain feasibility, flight feasibility, operational risk, baseline priority, classification, scenario ranks, and robustness are read from the terrain-v2 ranked corridor file. Weather remains district-level climatology. UI terms such as Very high, High, Moderate, Limited, and Low are transparent score-band labels for normalized 0-1 values; they do not change the underlying scores.</p>
         <h3>4. Operational assumptions</h3>
         <p>The UAV screen uses the loaded assumption record: {fmt(data.uav.cruise_speed_base_kmh, 0, " km/h")} base speed, {fmt(data.uav.aerial_route_factor, 1)} aerial route factor, {fmt(data.uav.fixed_mission_time_min, 0, " min")} fixed mission time, and {fmt(data.uav.reference_effective_one_way_radius_km, 0, " km")} reference one-way radius.</p>
         <h3>5. Limitations</h3>
-        <p>No actual origin-to-destination road-route polylines were found; maps show direct candidate UAV links and numeric road-network estimates only. Weather is monthly climatological/historical planning context, not real-time aviation weather. Seasonal readiness is an additional planning overlay based on the loaded monthly weather-risk score; it does not authorize or prohibit UAV operations and does not alter baseline corridor priority unless the underlying methodology explicitly combines them. Feasibility is preliminary and rankings depend on project methodology.</p>
+        <p>No actual origin-to-destination road-route polylines were found; maps show direct candidate UAV links and numeric road-network estimates only. Weather is monthly climatological/historical planning context, not real-time aviation weather or corridor-specific weather. Seasonal readiness is an additional planning overlay based on the loaded monthly weather-risk score; it does not authorize or prohibit UAV operations and does not alter UAV mission time. Feasibility is preliminary and rankings depend on project methodology.</p>
         <h3>Verified key finding</h3>
         <p>{data.corridors[0].destination_commune_old} is baseline rank #{data.corridors[0].rank_baseline}, classified {displayClass(data.corridors[0].final_classification_baseline)}, with {fmt(data.corridors[0].road_time_base_min)} min road time, {fmt(data.corridors[0].uav_mission_time_base_min)} min UAV time, {fmt(data.corridors[0].time_saved_base_min)} min saved, and Top-3 in {data.corridors[0].top3_scenario_count}/4 scenarios.</p>
       </aside>
