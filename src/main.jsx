@@ -1268,71 +1268,137 @@ Recommendation class: ${displayClass(c.final_classification_baseline)}`}</title>
 }
 
 function MissionPlanner({ data, selected, setSelectedId, setScreen, planningMonth, setPlanningMonth }) {
-  const [origin, setOrigin] = useState(data.corridors[0].origin_id);
-  const [missionType, setMissionType] = useState("Essential medicines");
+  const [missionType, setMissionType] = useState("Essential Medicine");
   const [payload, setPayload] = useState("1.5");
+  const [urgency, setUrgency] = useState("Urgent");
+  const [evaluated, setEvaluated] = useState(false);
   const [reviewOpen, setReviewOpen] = useState(false);
   const selectedMonth = data.weather.find((item) => item.month === planningMonth) || data.weather[0];
   const monthCategory = weatherCategory(selectedMonth, data.weather);
-  const label = selected.final_classification_baseline === "LAUNCH" ? "PILOT CANDIDATE FOR REVIEW" : selected.final_classification_baseline === "HOLD" ? "HOLD" : "CONDITIONAL";
+  const label = selected.final_classification_baseline === "LAUNCH" ? "LAUNCH CANDIDATE" : selected.final_classification_baseline;
+  function evaluate(event) {
+    event.preventDefault();
+    if (!Number.isFinite(Number(payload)) || Number(payload) <= 0) return;
+    setEvaluated(true);
+  }
   return (
     <>
-      <section className="screen planner-grid">
-        <aside className="workflow-panel">
-          <SectionTitle eyebrow="Define mission" title="Planning inputs" compact />
-          <Step number="1" title="Select origin">
-            <select value={origin} onChange={(e) => setOrigin(e.target.value)}><option value={data.corridors[0].origin_id}>{data.corridors[0].origin_name}</option></select>
-          </Step>
-          <Step number="2" title="Select destination corridor">
+      <section className="screen planner-grid mission-request">
+        <form className="workflow-panel" onSubmit={evaluate} onChange={() => { setEvaluated(false); setReviewOpen(false); }}>
+          <SectionTitle eyebrow="Define mission" title="Mission request" compact />
+          <label className="mission-field">Origin
+            <input value="Mường Ảng District Health Center" readOnly />
+          </label>
+          <label className="mission-field">Destination
             <select value={selected.corridor_id} onChange={(e) => setSelectedId(e.target.value)}>
               {data.corridors.map((c) => <option key={c.corridor_id} value={c.corridor_id}>{c.destination_commune_old}</option>)}
             </select>
-          </Step>
-          <Step number="3" title="Select mission type">
+          </label>
+          <label className="mission-field">Cargo Type
             <select value={missionType} onChange={(e) => setMissionType(e.target.value)}>
-              <option>Essential medicines</option><option>Diagnostic samples</option><option>Emergency supplies</option>
+              <option>Essential Medicine</option><option>Emergency Consumables</option><option>Diagnostic Kit</option><option>Medical Supplies</option>
             </select>
-          </Step>
-          <Step number="4" title="Planning month">
-            <select value={planningMonth} onChange={(e) => setPlanningMonth(Number(e.target.value))}>
-              {data.weather.map((item) => <option key={item.month} value={item.month}>{months[item.month - 1]}</option>)}
+          </label>
+          <label className="mission-field">Payload (kg)
+            <input type="number" min="0.01" step="any" required value={payload} onChange={(e) => setPayload(e.target.value)} aria-describedby="mission-context-note" />
+          </label>
+          <label className="mission-field">Urgency
+            <select value={urgency} onChange={(e) => setUrgency(e.target.value)}>
+              <option>Routine</option><option>High</option><option>Urgent</option>
             </select>
-          </Step>
-          <Step number="5" title="Payload reference">
-            <input value={payload} onChange={(e) => setPayload(e.target.value)} inputMode="decimal" /> <span>kg, recorded for planning context; not used in the current performance model</span>
-          </Step>
-          <Step number="6" title="Planning context">
-            <p>Preliminary screening from modeled logistics metrics and climatological context.</p>
-          </Step>
-        </aside>
-        <main className="screening-panel">
-          <SectionTitle eyebrow="Preliminary mission screening" title={selected.destination_commune_old} />
-          <div className={`screening-label ${clsClass(selected.final_classification_baseline)}`}>{label}</div>
-          <p className="decision-copy">{recommendationText(selected)} Evidence-based screening, not operational authorization.</p>
-          <div className="grouped-grid">
-            <EvidenceGroup title="Mission" items={[["Destination", selected.destination_commune_old], ["Mission type", missionType], ["Payload input", `${payload || "n/a"} kg`], ["Aerial distance", fmt(selected.candidate_aerial_distance_km, 1, " km")]]} />
-            <EvidenceGroup title="Performance" items={[["Road ETA", fmt(selected.road_time_base_min, 1, " min")], ["UAV ETA", fmt(selected.uav_mission_time_base_min, 1, " min")], ["Time saved", fmt(selected.time_saved_base_min, 1, " min")], ["Detour ratio", `${fmt(selected.detour_ratio, 2)}x`]]} />
-          </div>
-          <div className="planner-seasonal-context">
-            <span>Seasonal context</span>
-            <strong>{monthCategory.short}</strong>
-            <p>{months[selectedMonth.month - 1]} adds {monthCategory.label.toLowerCase()}; baseline corridor priority remains unchanged. Seasonal readiness is a climatological planning overlay, not a recalculation of baseline corridor priority.</p>
-          </div>
-          <ScoreGrid selected={selected} expanded />
-          <div className="planner-actions">
-            <button className="review-button" onClick={() => setReviewOpen(true)}>Review corridor details</button>
-            <button className="context-action secondary" onClick={() => setScreen("seasonal")}>Review seasonal context</button>
-          </div>
-          <div className="hard-warning">
-            Prototype decision support only. Final field operation requires operator verification, current weather, airspace clearance, aircraft status, and applicable aviation procedures.
-          </div>
-        </main>
+          </label>
+          <p className="mission-note" id="mission-context-note">Cargo, payload, and urgency are planning context only. They do not change the existing baseline scores or modeled times; payload compatibility requires review.</p>
+          <button className="context-action mission-evaluate" type="submit">Evaluate Mission <ArrowRight size={18} /></button>
+          <details className="mission-seasonal-input">
+            <summary>Seasonal planning context</summary>
+            <label className="mission-field">Planning month
+              <select value={planningMonth} onChange={(e) => setPlanningMonth(Number(e.target.value))}>
+                {data.weather.map((item) => <option key={item.month} value={item.month}>{months[item.month - 1]}</option>)}
+              </select>
+            </label>
+          </details>
+        </form>
+        <div className="screening-panel">
+          {!evaluated ? <div className="mission-empty" role="status">
+            <Plane size={36} />
+            <h2>Evaluate a medical supply request</h2>
+            <p>Confirm the mission inputs, then select Evaluate Mission to see the existing baseline recommendation and Road vs UAV comparison.</p>
+          </div> : <>
+            <div role="status" aria-live="polite">
+              <SectionTitle eyebrow="MISSION RECOMMENDATION" title={selected.destination_commune_old} />
+              <div className={`screening-label ${clsClass(selected.final_classification_baseline)}`}>{label}</div>
+              <p className="mission-note">{missionType} · {payload} kg · {urgency}</p>
+            </div>
+            <div className="mission-kpis">
+              <Kpi label="Healthcare Need" value={fmt(selected.medical_accessibility_need_score, 2)} note="Existing need score / 1" />
+              <Kpi label="Road Time" value={fmt(selected.road_time_base_min)} unit="min" />
+              <Kpi label="UAV Time" value={fmt(selected.uav_mission_time_base_min)} unit="min" />
+              <Kpi label="Time Saved" value={fmt(selected.time_saved_base_min)} unit="min" />
+              <Kpi label="Flight Feasibility" value={fmt(selected.flight_feasibility_score, 2)} note="Preliminary score / 1" />
+              <Kpi label="Priority Rank" value={`#${selected.rank_baseline}`} note="Baseline scenario" />
+            </div>
+            <p className="decision-copy">{selected.corridor_id === "HF001_HF004"
+              ? `${selected.destination_commune_old} is recommended because it combines meaningful healthcare-access disadvantage, high modeled time savings, and strong preliminary flight feasibility.`
+              : recommendationText(selected)}</p>
+            <p className="mission-note mission-safety">SkyBridge provides preliminary mission prioritization. Final operation requires current weather, airspace, aircraft-status, and operator verification.</p>
+            <RoadUavMap data={data} selected={selected} />
+            <div className="planner-actions">
+              <button className="review-button" onClick={() => setReviewOpen(true)}>Review corridor details</button>
+              <button className="context-action secondary" onClick={() => setScreen("seasonal")}>Review seasonal context</button>
+            </div>
+          </>}
+        </div>
       </section>
-      {reviewOpen && <MissionReviewPanel selected={selected} origin={data.corridors[0].origin_name} missionType={missionType} payload={payload} selectedMonth={selectedMonth} monthCategory={monthCategory} onClose={() => setReviewOpen(false)} />}
+      {evaluated && reviewOpen && <MissionReviewPanel selected={selected} origin={selected.origin_name} missionType={missionType} payload={payload} selectedMonth={selectedMonth} monthCategory={monthCategory} onClose={() => setReviewOpen(false)} />}
     </>
   );
 }
 
+function RoadUavMap({ data, selected }) {
+  const containerRef = useRef(null);
+  useEffect(() => {
+    const map = L.map(containerRef.current, { scrollWheelZoom: false, attributionControl: false, zoomAnimation: false }).setView([selected.origin_lat, selected.origin_lon], 11);
+    L.geoJSON(data.boundary, { style: { color: "#506f82", weight: 2, fillColor: "#edf3f6", fillOpacity: 0.7 } }).addTo(map);
+    L.geoJSON(data.communeBoundaries, { style: { color: "#506f82", weight: 1, dashArray: "3 5", fillOpacity: 0 } }).addTo(map);
+    const origin = [selected.origin_lat, selected.origin_lon];
+    const destination = [selected.destination_lat, selected.destination_lon];
+    L.polyline([origin, destination], { color: "#ffffff", weight: 8 }).addTo(map);
+    L.polyline([origin, destination], { color: "#00A89D", weight: 4, dashArray: "8 6" })
+      .bindTooltip("Direct UAV corridor · schematic aerial link").addTo(map);
+    const markerLabel = (title, subtitle) => {
+      const label = document.createElement("div");
+      const name = document.createElement("strong");
+      name.textContent = title;
+      label.append(name, document.createElement("br"), document.createTextNode(subtitle));
+      return label;
+    };
+    L.circleMarker(origin, { radius: 8, color: "#fff", weight: 3, fillColor: "#08263A", fillOpacity: 1 })
+      .bindTooltip(markerLabel("District Health Center", selected.origin_name), { permanent: true, direction: "bottom", offset: [0, 10] }).addTo(map);
+    L.circleMarker(destination, { radius: 8, color: "#fff", weight: 3, fillColor: "#00A89D", fillOpacity: 1 })
+      .bindTooltip(markerLabel(selected.destination_commune_old, selected.destination_name), { permanent: true, direction: "top", offset: [0, -10] }).addTo(map);
+    const fit = () => {
+      map.invalidateSize();
+      map.fitBounds(L.latLngBounds([origin, destination]), { padding: [90, 75], maxZoom: 13, animate: false });
+    };
+    fit();
+    const observer = new ResizeObserver(fit);
+    observer.observe(containerRef.current);
+    return () => { observer.disconnect(); map.remove(); };
+  }, [data, selected]);
+  return (
+    <section className="mission-comparison" aria-label="Road vs UAV comparison">
+      <SectionTitle eyebrow="Selected corridor" title="Road vs UAV" compact />
+      <div className="mission-route-metrics">
+        <div className="mission-road"><span>ROAD</span><strong>{fmt(selected.road_time_base_min)} <small>min</small></strong><p>{fmt(selected.road_distance_km, 2)} km modeled network distance</p></div>
+        <div className="mission-air"><span>UAV</span><strong>{fmt(selected.uav_mission_time_base_min)} <small>min</small></strong><p>{fmt(selected.candidate_aerial_distance_km, 2)} km modeled aerial distance</p></div>
+        <div className="mission-saving"><span>TIME SAVED</span><strong>{fmt(selected.time_saved_base_min)} <small>min saved</small></strong><p>{fmt(selected.detour_ratio, 2)}× road / straight-line distance</p></div>
+      </div>
+      <div ref={containerRef} className="mission-route-map" role="region" aria-label={`District Health Center to ${selected.destination_commune_old}: direct UAV corridor map`} />
+      <p className="mission-map-note"><span className="mission-air-key" /> Teal dashed line: direct UAV corridor approximation. The modeled aerial distance includes the existing route factor; the line is not a surveyed flight path.</p>
+      <p className="mission-map-note mission-road-note">ROAD: modeled travel time and distance only. No road-route or network geometry is stored in this project, so no road path is drawn. Map context uses the existing district and commune boundaries.</p>
+    </section>
+  );
+}
 function MissionReviewPanel({ selected, origin, missionType, payload, selectedMonth, monthCategory, onClose }) {
   const required = [
     "Operator verification",

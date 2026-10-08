@@ -1288,3 +1288,38 @@ tr.selected { background: #edf9f8; }
   .scenario-list button { grid-template-columns: 36px 1fr; }
   .scenario-list em, .scenario-list .badge { justify-self: start; margin-left: 0; }
 }
+
+/* Mission request and selected-corridor comparison. */
+.mission-request { align-items: start; }
+.mission-field { display: grid; gap: 7px; color: var(--navy); font-size: 13px; font-weight: 800; }
+.mission-field input, .mission-field select { width: 100%; min-width: 0; padding: 10px; border: 1px solid var(--line); border-radius: 6px; background: #fff; color: var(--ink); font-size: 13px; font-weight: 400; }
+.mission-field input[readonly] { background: var(--paper); }
+.mission-note { color: var(--muted); font-size: 12px; line-height: 1.5; margin: 0 0 14px; }
+.mission-evaluate { display: flex; justify-content: space-between; align-items: center; padding: 14px; background: var(--teal-dark); }
+.mission-seasonal-input { font-size: 13px; color: var(--muted); }
+.mission-seasonal-input summary { cursor: pointer; margin-bottom: 10px; }
+.mission-empty { min-height: 420px; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; padding: 24px; color: var(--muted); }
+.mission-empty svg { color: var(--teal-dark); }
+.mission-empty h2 { color: var(--navy); }
+.mission-empty p { max-width: 460px; line-height: 1.6; }
+.mission-kpis { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; margin-bottom: 16px; }
+.mission-kpis .kpi { padding: 12px; }
+.mission-kpis .kpi strong { font-size: 30px; }
+.mission-safety { padding: 10px 12px; border-left: 3px solid var(--teal); background: var(--paper); }
+.mission-comparison { border-top: 1px solid var(--line); padding-top: 16px; }
+.mission-route-metrics { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; margin-bottom: 12px; }
+.mission-route-metrics > div { border: 1px solid var(--line); border-top: 3px solid var(--blue); border-radius: 6px; padding: 10px; }
+.mission-route-metrics .mission-air, .mission-route-metrics .mission-saving { border-top-color: var(--teal); }
+.mission-route-metrics span { font-size: 11px; font-weight: 900; color: var(--muted); }
+.mission-route-metrics strong { display: block; color: var(--navy); font-size: 27px; margin-top: 4px; }
+.mission-route-metrics small { font-size: 12px; font-weight: 600; }
+.mission-route-metrics p { font-size: 11px; color: var(--muted); margin: 4px 0 0; }
+.mission-route-map { height: 340px; background: #dfeaf0; border: 1px solid var(--line); border-radius: 8px; }
+.mission-route-map .leaflet-tooltip { text-align: center; font-family: inherit; }
+.mission-map-note { font-size: 12px; line-height: 1.5; color: var(--muted); margin: 10px 0 0; }
+.mission-air-key { display: inline-block; width: 24px; border-top: 3px dashed var(--teal); vertical-align: middle; margin-right: 5px; }
+.mission-road-note { border-left: 3px solid var(--blue); padding-left: 10px; }
+@media (max-width: 640px) {
+  .mission-kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .mission-route-metrics { grid-template-columns: 1fr; }
+}
