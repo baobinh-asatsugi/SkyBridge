@@ -1,33 +1,9 @@
+import MissionWorkspace, { MissionMethodology } from './MissionWorkspace.jsx';
 import React, { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { createRoot } from "react-dom/client";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
-import {
-  Activity,
-  AlertTriangle,
-  ArrowRight,
-  BadgeCheck,
-  BarChart3,
-  CalendarDays,
-  CheckCircle2,
-  ChevronsUpDown,
-  CloudRain,
-  Compass,
-  Gauge,
-  GitCompare,
-  HelpCircle,
-  Info,
-  Layers,
-  MapPinned,
-  Plane,
-  RotateCcw,
-  Search,
-  ShieldAlert,
-  SlidersHorizontal,
-  Stethoscope,
-  Table2,
-  Wind
-} from "lucide-react";
+import { Activity, AlertTriangle, ArrowRight, BadgeCheck, BarChart3, CalendarDays, CheckCircle2, ChevronsUpDown, CloudRain, Compass, Gauge, GitCompare, HelpCircle, Info, Layers, MapPinned, Plane, RotateCcw, Search, ShieldAlert, SlidersHorizontal, Stethoscope, Table2, Wind } from "lucide-react";
 import "./styles.css";
 
 const DATA = {
@@ -46,7 +22,7 @@ const navItems = [
   ["mission", "01", "Mission Control", MapPinned],
   ["explorer", "02", "Corridor Explorer", GitCompare],
   ["priority", "03", "Prioritization", BarChart3],
-  ["planner", "04", "Mission Planner", Plane],
+  
   ["scenario", "05", "Scenario Lab", SlidersHorizontal],
   ["seasonal", "06", "Seasonal Readiness", CalendarDays]
 ];
@@ -59,7 +35,7 @@ const classificationColors = {
 };
 
 const pageMeta = {
-  mission: ["Mission Control", "Screen corridor priorities and identify candidates for UAV pilot review."],
+  mission: ["Mission Control", "Create a medical mission and compare road and UAV options."],
   explorer: ["Corridor Explorer", "Compare road access with modeled UAV alternatives."],
   priority: ["Prioritization", "Identify high-need corridors with viable preliminary flight conditions."],
   planner: ["Mission Planner", "Screen a candidate healthcare delivery mission."],
@@ -68,7 +44,7 @@ const pageMeta = {
 };
 
 const contextScreens = new Set(["priority", "scenario", "seasonal"]);
-const priorityScoreTooltip = "Composite screening score combining healthcare need, UAV benefit, flight feasibility, and operational risk under the displayed decision scenario. Weights are embedded in the supplied scenario score fields.";
+const priorityScoreTooltip = "Composite screening score combining healthcare need, UAV benefit, flight feasibility, and operational risk under the displayed decision scenario. Scores are inherited; the complete weighting pipeline is not supplied.";
 
 const scenarioFields = {
   Baseline: "rank_baseline",
@@ -81,7 +57,7 @@ const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "
 
 const LANG_STORAGE_KEY = "skybridge-language";
 
-const viExact = {
+const viExact = { "Use as Mission Template": "Dùng làm mẫu nhiệm vụ", "Create a medical mission and compare road and UAV options.": "Tạo nhiệm vụ y tế và so sánh đường bộ với UAV",
   "Mission Control": "Trung tâm Điều phối",
   "Corridor Explorer": "Phân tích Tuyến",
   "Prioritization": "Xếp hạng Ưu tiên",
@@ -416,26 +392,38 @@ function translateText(text, lang) {
   return translated;
 }
 
+const translatedNodes = new WeakMap();
+const translatedAttributes = new WeakMap();
 function applyLanguage(root, lang) {
-  if (!root || lang !== "vi") return;
+  if (!root) return;
   const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, {
     acceptNode(node) {
       const parent = node.parentElement;
-      if (!parent || ["SCRIPT", "STYLE", "CODE"].includes(parent.tagName)) return NodeFilter.FILTER_REJECT;
-      if (!node.nodeValue.trim()) return NodeFilter.FILTER_REJECT;
-      return NodeFilter.FILTER_ACCEPT;
+      return !parent || parent.closest("[data-native-language]") || ["SCRIPT","STYLE","CODE"].includes(parent.tagName) || !node.nodeValue.trim() ? NodeFilter.FILTER_REJECT : NodeFilter.FILTER_ACCEPT;
     }
   });
   const nodes = [];
   while (walker.nextNode()) nodes.push(walker.currentNode);
-  nodes.forEach((node) => {
-    node.nodeValue = translateText(node.nodeValue, lang);
-  });
-  root.querySelectorAll("[aria-label], [placeholder], [title]").forEach((node) => {
-    ["aria-label", "placeholder", "title"].forEach((attr) => {
-      const value = node.getAttribute(attr);
-      if (value) node.setAttribute(attr, translateText(value, lang));
-    });
+  for (const node of nodes) {
+    const old = translatedNodes.get(node);
+    const original = old && node.nodeValue === old.translated ? old.original : node.nodeValue;
+    const translated = lang === "vi" ? translateText(original, lang) : original;
+    node.nodeValue = translated;
+    translatedNodes.set(node, {original, translated});
+  }
+  root.querySelectorAll("[aria-label], [placeholder], [title]").forEach(node => {
+    if (node.closest("[data-native-language]")) return;
+    const records = translatedAttributes.get(node) || {};
+    for (const attr of ["aria-label","placeholder","title"]) {
+      const current = node.getAttribute(attr);
+      if (!current) continue;
+      const old = records[attr];
+      const original = old && current === old.translated ? old.original : current;
+      const translated = lang === "vi" ? translateText(original, lang) : original;
+      node.setAttribute(attr, translated);
+      records[attr] = {original, translated};
+    }
+    translatedAttributes.set(node, records);
   });
 }
 
@@ -719,15 +707,15 @@ function useSkybridgeData() {
     async function load() {
       const [corridorsText, scenariosText, weatherText, healthText, communesText, accessText, uavText, boundary, communeBoundaries] =
         await Promise.all([
-          fetch(DATA.corridors).then((res) => res.text()),
-          fetch(DATA.scenarios).then((res) => res.text()),
-          fetch(DATA.weather).then((res) => res.text()),
-          fetch(DATA.health).then((res) => res.text()),
-          fetch(DATA.communes).then((res) => res.text()),
-          fetch(DATA.access).then((res) => res.text()),
-          fetch(DATA.uav).then((res) => res.text()),
-          fetch(DATA.boundary).then((res) => res.json()),
-          fetch(DATA.communeBoundaries).then((res) => res.json())
+          fetch(DATA.corridors).then((res) => { if (!res.ok) throw new Error("Dataset unavailable: " + res.url + " (" + res.status + ")"); return res.text(); }),
+          fetch(DATA.scenarios).then((res) => { if (!res.ok) throw new Error("Dataset unavailable: " + res.url + " (" + res.status + ")"); return res.text(); }),
+          fetch(DATA.weather).then((res) => { if (!res.ok) throw new Error("Dataset unavailable: " + res.url + " (" + res.status + ")"); return res.text(); }),
+          fetch(DATA.health).then((res) => { if (!res.ok) throw new Error("Dataset unavailable: " + res.url + " (" + res.status + ")"); return res.text(); }),
+          fetch(DATA.communes).then((res) => { if (!res.ok) throw new Error("Dataset unavailable: " + res.url + " (" + res.status + ")"); return res.text(); }),
+          fetch(DATA.access).then((res) => { if (!res.ok) throw new Error("Dataset unavailable: " + res.url + " (" + res.status + ")"); return res.text(); }),
+          fetch(DATA.uav).then((res) => { if (!res.ok) throw new Error("Dataset unavailable: " + res.url + " (" + res.status + ")"); return res.text(); }),
+          fetch(DATA.boundary).then((res) => { if (!res.ok) throw new Error("Geography unavailable: " + res.url + " (" + res.status + ")"); return res.json(); }),
+          fetch(DATA.communeBoundaries).then((res) => { if (!res.ok) throw new Error("Geography unavailable: " + res.url + " (" + res.status + ")"); return res.json(); })
         ]);
       if (cancelled) return;
       const scenarios = parseCsv(scenariosText);
@@ -776,7 +764,7 @@ function useSkybridgeData() {
 function App() {
   const data = useSkybridgeData();
   const shellRef = useRef(null);
-  const [screen, setScreen] = useState("mission");
+  const [screen, setScreen] = useState("mission"); const [missionDraft, setMissionDraft] = useState(null);
   const [selectedId, setSelectedId] = useState("HF001_HF004");
   const [planningMonth, setPlanningMonth] = useState(7);
   const [notesOpen, setNotesOpen] = useState(false);
@@ -793,11 +781,11 @@ function App() {
   const selected = data.corridors.find((item) => item.corridor_id === selectedId) || data.corridors[0];
   const [pageTitle, pageSubtitle] = pageMeta[screen];
   const Screen = {
-    mission: MissionControl,
+    mission: MissionWorkspace,
     explorer: CorridorExplorer,
     priority: Prioritization,
-    planner: MissionPlanner,
-    scenario: ScenarioLab,
+    planner: MissionWorkspace,
+    scenario: ScenarioWorkspace,
     seasonal: SeasonalOperations
   }[screen];
 
@@ -847,9 +835,9 @@ function App() {
             <div className="status-badge"><Activity size={15} /> Planning Prototype</div>
           </div>
         </header>
-        <Screen data={data} selected={selected} setSelectedId={setSelectedId} setScreen={setScreen} planningMonth={planningMonth} setPlanningMonth={setPlanningMonth} />
+        <Screen lang={lang} draft={missionDraft} setDraft={setMissionDraft} data={data} selected={selected} setSelectedId={setSelectedId} setScreen={setScreen} planningMonth={planningMonth} setPlanningMonth={setPlanningMonth} />
       </main>
-      {notesOpen && <MethodologyDrawer data={data} onClose={() => setNotesOpen(false)} />}
+      {notesOpen && <MethodologyDrawer lang={lang} data={data} onClose={() => setNotesOpen(false)} />}
     </div>
   );
 }
@@ -1041,7 +1029,7 @@ function DecisionPanel({ selected, setScreen }) {
   );
 }
 
-function CorridorExplorer({ data, selected, setSelectedId, setScreen }) {
+function CorridorExplorer({ data, selected, setSelectedId, setScreen, setDraft }) {
   const [query, setQuery] = useState("");
   const filtered = data.corridors.filter((c) => c.destination_commune_old.toLowerCase().includes(query.toLowerCase()));
   return (
@@ -1072,7 +1060,7 @@ function CorridorExplorer({ data, selected, setSelectedId, setScreen }) {
           <InsightCard label="Time benefit" value={`${fmt(selected.time_saved_base_min, 1)} min`} note={`${pct(selected.time_saved_base_pct)} modeled reduction`} />
         </div>
         <ScoreGrid selected={selected} expanded />
-        <button className="context-action inline" onClick={() => setScreen("priority")}>View prioritization</button>
+        <button className="context-action inline" onClick={() => { setDraft(null); setScreen("mission"); }}>Use as Mission Template</button>
       </main>
     </section>
   );
@@ -1679,12 +1667,12 @@ function ScoreGrid({ selected, expanded = false }) {
   );
 }
 
-function MethodologyDrawer({ data, onClose }) {
+function MethodologyDrawer({ data, onClose, lang }) {
   return (
     <div className="drawer-backdrop" onClick={onClose}>
       <aside className="drawer" onClick={(e) => e.stopPropagation()}>
         <button className="drawer-close" onClick={onClose}>Close</button>
-        <h2>Methodology / Data Notes</h2>
+        <h2>Methodology / Data Notes</h2><MissionMethodology lang={lang}/>
         <h3>Data lineage</h3>
         <div className="lineage-flow">
           <span>Source data</span><i>↓</i><span>Modeled metrics</span><i>↓</i><span>Derived scores</span><i>↓</i><span>Decision screening</span>
@@ -1781,4 +1769,5 @@ function SectionTitle({ eyebrow, title, compact = false }) {
   return <div className={compact ? "section-title compact" : "section-title"}><span>{eyebrow}</span><h2>{title}</h2></div>;
 }
 
+function ScenarioWorkspace(props) { return <><MissionWorkspace {...props} scenario /><details className="legacy-scenarios"><summary data-native-language="true">{props.lang === "vi" ? "Độ nhạy xếp hạng tuyến hiện có" : "Existing corridor ranking sensitivity"}</summary><ScenarioLab {...props}/></details></>; }
 createRoot(document.getElementById("root")).render(<App />);

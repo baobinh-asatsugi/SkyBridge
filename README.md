@@ -1,55 +1,34 @@
-# SkyBridge Mission Control
+# SkyBridge V2
 
-Medical Logistics Decision Support for Mountain Communities.
+Interactive medical UAV planning for Mường Ảng, Điện Biên. Create a mission, compare modeled road/UAV times, check payload and range, inspect explanations, reuse corridor templates and compare scenarios in English or Vietnamese.
 
-This is a deployable Vite/React prototype for preliminary planning and operator evidence review in Mường Ảng, Điện Biên. It is not a flight authorization, dispatch, or telemetry system.
+This is a research planning prototype, not operational dispatch or flight authorization.
 
-## Run Locally
+## Run
 
-```bash
-npm install
+```sh
+npm ci
 npm run dev
 ```
 
-The dev command builds the app and serves the production preview. This avoids a Vite dependency-optimizer issue observed on the local Windows OneDrive path while preserving the requested `npm run dev` entrypoint.
+The existing development command builds and serves the production preview (normally http://127.0.0.1:4173). Production output remains dist/.
 
-## Build
+## Verify
 
-```bash
+```sh
+npm test
 npm run build
+npm run test:integration
 ```
 
-Build output is written to `dist/`.
+Browser tests require Playwright Chromium or an installed Edge browser. PowerShell example: $env:BROWSER_CHANNEL='msedge'. Integration tests start their own server, exercise the mission workflow and save V2 desktop/mobile screenshots.
 
-## Preview Build
+## Evidence and deployment
 
-```bash
-npm run preview
-```
+- [Architecture and data audit](V2_AUDIT.md)
+- [Local operation, demo and existing Render update instructions](V2_RUNBOOK.md)
+- [Verification results](V2_TEST_RESULTS.md)
 
-## Screenshots
+Use the existing https://skybridge-a6r8.onrender.com/ service. No new hosting service is required or created.
 
-Screenshots are saved in `screenshots/`. To regenerate them while the app is running:
-
-```bash
-npm run screenshots -- http://127.0.0.1:5176/
-```
-
-## Vercel Deployment
-
-1. Create a new Vercel project from this `mission-control` folder.
-2. Use framework preset: Vite.
-3. Build command: `npm run build`.
-4. Output directory: `dist`.
-5. No environment variables are required.
-
-## Netlify Deployment
-
-1. Create a new Netlify site from this `mission-control` folder.
-2. Build command: `npm run build`.
-3. Publish directory: `dist`.
-4. No environment variables are required.
-
-## Important Limitation
-
-The prototype uses modeled and derived planning metrics, monthly climatological context, and preliminary feasibility/risk scores. Final dispatch would require operator verification, current weather, airspace clearance, aircraft status, and applicable aviation procedures.
+Road times and corridor scores remain source-backed precomputed models. UAV times and selected payload/range checks are recalculated. No road polylines are supplied, so the map draws only the explicitly illustrative UAV path; road figures remain numeric. Arbitrary locations never inherit unrelated healthcare or feasibility scores.
