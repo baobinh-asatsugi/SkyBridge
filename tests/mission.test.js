@@ -1,7 +1,7 @@
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
-import {calculateMission,defaults} from '../src/mission-engine.js';
+import {calculateMission,corridorBaselineMetrics,defaults} from '../src/mission-engine.js';
 const lines=fs.readFileSync(new URL('../public/data/final_corridor_priority_dataset_terrain_v2_ranked.csv',import.meta.url),'utf8').trim().split(/\r?\n/).map(l=>l.slice(1,-1).split('","'));
 const corridors=lines.slice(1).map(row=>Object.fromEntries(lines[0].map((k,i)=>[k,row[i]!==''&&Number.isFinite(Number(row[i]))?Number(row[i]):row[i]])));
 const c=corridors.find(c=>c.corridor_id==='HF001_HF004');
@@ -13,6 +13,7 @@ test('A: source-backed baseline uses exact formula and existing road model',()=>
 test('B: identical coordinates rejected even with different IDs',()=>assert.deepEqual(run({destination:{...request.origin,facility_id:'other'}}).errors,['sameLocation']));
 test('C: speed sensitivity follows formula',()=>assert.equal(run({uavSpeedKmh:25}).uavTimeMinutes,(run({}).uavTimeMinutes-5)*2+5));
 test('D: handling increases time and reduces savings',()=>{assert.equal(run({handlingMinutes:15}).uavTimeMinutes,run({}).uavTimeMinutes+10)});
+test('D2: detour factor changes modeled flight distance, time, and savings',()=>{const a=run({}),b=run({detourFactor:1.3});assert(b.flightDistanceKm>a.flightDistanceKm);assert(b.uavTimeMinutes>a.uavTimeMinutes);assert(b.minutesSaved<a.minutesSaved)});
 test('E: range is applied to modeled flight distance',()=>{assert.equal(run({maxRangeKm:7.5}).recommendation,'infeasible');assert.deepEqual(run({maxRangeKm:7.5}).violations,['range'])});
 test('F: payload hard limit and urgency cannot override it',()=>assert.equal(run({payloadKg:4,urgency:'emergency'}).recommendation,'infeasible'));
 test('G: slow UAV returns negative savings and Road Preferred',()=>{const r=run({handlingMinutes:60});assert(r.minutesSaved<0);assert(r.percentageSaved<0);assert.equal(r.recommendation,'road')});
@@ -25,3 +26,18 @@ test('All source corridors preserve road data; baseline and scenario use shared 
 });
 test('Conditional outcome is reachable from existing corridor evidence',()=>{const c=corridors.find(c=>c.final_classification_baseline==='CONDITIONAL PILOT');assert(c);assert.equal(calculateMission({...defaults,maxRangeKm:100,origin:{facility_id:c.origin_id,lat:c.origin_lat,lon:c.origin_lon},destination:{facility_id:c.destination_id,lat:c.destination_lat,lon:c.destination_lon}},corridors).recommendation,'conditional')});
 test('Missing road values remain null, never zero or invented',()=>{const r=calculateMission(request,[{...c,road_time_base_min:null}]);assert.equal(r.roadTimeMinutes,null);assert.equal(r.minutesSaved,null);assert.equal(r.recommendation,'insufficient')});
+test('Known corridor distance definitions and baseline outputs remain consistent',()=>{
+ const source=corridorBaselineMetrics(c),dynamic=run({});
+ assert.equal(source.straightLineDistanceKm,7.04);
+ assert.equal(source.modeledFlightDistanceKm,7.744);
+ assert.equal(source.roadNetworkDistanceKm,17.711);
+ assert.equal(source.roadTimeMinutes,53.2);
+ assert.equal(source.uavTimeMinutes,14.3);
+ assert.equal(source.minutesSaved,38.9);
+ assert.equal(dynamic.aerialDistanceKm,source.straightLineDistanceKm);
+ assert(Math.abs(dynamic.flightDistanceKm-source.modeledFlightDistanceKm)<1e-9);
+ assert.equal(dynamic.roadDistanceKm,source.roadNetworkDistanceKm);
+ assert.equal(dynamic.roadTimeMinutes,source.roadTimeMinutes);
+ assert.equal(dynamic.uavTimeMinutes.toFixed(1),source.uavTimeMinutes.toFixed(1));
+ assert.equal(dynamic.minutesSaved.toFixed(1),source.minutesSaved.toFixed(1));
+});

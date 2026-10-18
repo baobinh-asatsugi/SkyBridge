@@ -1,4 +1,5 @@
 import MissionWorkspace, { MissionMethodology } from './MissionWorkspace.jsx';
+import { calculateMission, corridorBaselineMetrics, defaults } from './mission-engine.js';
 import React, { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { createRoot } from "react-dom/client";
 import L from "leaflet";
@@ -19,12 +20,10 @@ const DATA = {
 };
 
 const navItems = [
-  ["mission", "01", "Mission Control", MapPinned],
-  ["explorer", "02", "Corridor Explorer", GitCompare],
-  ["priority", "03", "Prioritization", BarChart3],
-  
-  ["scenario", "05", "Scenario Lab", SlidersHorizontal],
-  ["seasonal", "06", "Seasonal Readiness", CalendarDays]
+  ["decision", "01", "Decision Workspace", MapPinned],
+  ["intelligence", "02", "Corridor Intelligence", GitCompare],
+  ["scenario", "03", "Scenario Studio", SlidersHorizontal],
+  ["evidence", "04", "Evidence & Methodology", Info]
 ];
 
 const classificationColors = {
@@ -35,15 +34,18 @@ const classificationColors = {
 };
 
 const pageMeta = {
+  decision: ["Decision Workspace", "Define a medical delivery and generate an explainable planning recommendation."],
+  intelligence: ["Corridor Intelligence", "Rank, compare, and inspect healthcare corridors using the established evidence model."],
+  evidence: ["Evidence & Methodology", "Trace the data, assumptions, seasonal context, policy evidence, and limitations."],
   mission: ["Mission Control", "Create a medical mission and compare road and UAV options."],
   explorer: ["Corridor Explorer", "Compare road access with modeled UAV alternatives."],
   priority: ["Prioritization", "Identify high-need corridors with viable preliminary flight conditions."],
   planner: ["Mission Planner", "Screen a candidate healthcare delivery mission."],
-  scenario: ["Scenario Lab", "Test whether corridor priorities remain stable under different decision objectives."],
+  scenario: ["Scenario Studio", "Test operational assumptions and established strategic ranking scenarios."],
   seasonal: ["Seasonal Readiness", "Identify lower- and higher-friction planning periods using historical climatological context."]
 };
 
-const contextScreens = new Set(["priority", "scenario", "seasonal"]);
+const contextScreens = new Set(["intelligence", "scenario", "evidence"]);
 const priorityScoreTooltip = "Composite screening score combining healthcare need, UAV benefit, flight feasibility, and operational risk under the displayed decision scenario. Scores are inherited; the complete weighting pipeline is not supplied.";
 
 const scenarioFields = {
@@ -51,6 +53,12 @@ const scenarioFields = {
   "Equity First": "rank_equity_first",
   "Efficiency First": "rank_efficiency_first",
   "Safety First": "rank_safety_first"
+};
+const scenarioMetadata = {
+  Baseline: { objective: "Reference research prioritization used for the published baseline.", source: "terrain-v2 export: priority_score_baseline and rank_baseline", cue: "No rank movement; component scores provide the reference context." },
+  "Equity First": { objective: "Explore greater emphasis on equitable healthcare access.", source: "terrain-v2 export: priority_score_equity_first and rank_equity_first", cue: "Healthcare-need scores may help interpret movement, but the absent weighting pipeline prevents causal attribution." },
+  "Efficiency First": { objective: "Explore greater emphasis on modeled transport benefit.", source: "terrain-v2 export: priority_score_efficiency_first and rank_efficiency_first", cue: "UAV-benefit scores may help interpret movement, but exported ranks—not UI recomputation—determine the result." },
+  "Safety First": { objective: "Explore greater emphasis on preliminary deployment conditions.", source: "terrain-v2 export: priority_score_safety_first and rank_safety_first", cue: "Flight-feasibility and operational-risk scores may help interpret movement; their exact scenario weights are unavailable." }
 };
 
 const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
@@ -764,7 +772,7 @@ function useSkybridgeData() {
 function App() {
   const data = useSkybridgeData();
   const shellRef = useRef(null);
-  const [screen, setScreen] = useState("mission"); const [missionDraft, setMissionDraft] = useState(null);
+  const [screen, setScreen] = useState("decision"); const [missionDraft, setMissionDraft] = useState(null);
   const [selectedId, setSelectedId] = useState("HF001_HF004");
   const [planningMonth, setPlanningMonth] = useState(7);
   const [notesOpen, setNotesOpen] = useState(false);
@@ -781,12 +789,10 @@ function App() {
   const selected = data.corridors.find((item) => item.corridor_id === selectedId) || data.corridors[0];
   const [pageTitle, pageSubtitle] = pageMeta[screen];
   const Screen = {
-    mission: MissionWorkspace,
-    explorer: CorridorExplorer,
-    priority: Prioritization,
-    planner: MissionWorkspace,
-    scenario: ScenarioWorkspace,
-    seasonal: SeasonalOperations
+    decision: MissionWorkspace,
+    intelligence: CorridorIntelligence,
+    scenario: ScenarioStudio,
+    evidence: EvidenceMethodology
   }[screen];
 
   return (
@@ -796,7 +802,7 @@ function App() {
           <div className="brand-mark">SB</div>
           <div>
             <strong>SKYBRIDGE</strong>
-            <span>Healthcare UAV screening</span>
+            <span>Medical UAV Decision Intelligence</span>
           </div>
         </div>
         <nav>
@@ -808,10 +814,7 @@ function App() {
             </button>
           ))}
         </nav>
-        <button className="methodology-link" onClick={() => setNotesOpen(true)}>
-          <Info size={17} />
-          Methodology / Data Notes
-        </button>
+        <div className="nav-disclaimer">Research planning prototype<br/>Not flight authorization</div>
       </aside>
       <main className="workspace">
         <header className="top-bar">
@@ -1020,7 +1023,7 @@ function DecisionPanel({ selected, setScreen }) {
         <h3>Why this recommendation?</h3>
         <p>{whyRecommendation(selected)}</p>
       </div>
-      <button className="context-action" onClick={() => setScreen("explorer")}>Explore corridor</button>
+      <button className="context-action" onClick={() => setScreen("intelligence")}>Explore corridor</button>
       <div className="evidence-note">
         <ShieldAlert size={17} />
         Preliminary screening only. Requires operator verification, current weather, airspace clearance, aircraft status, and applicable aviation procedures.
@@ -1029,7 +1032,29 @@ function DecisionPanel({ selected, setScreen }) {
   );
 }
 
-function CorridorExplorer({ data, selected, setSelectedId, setScreen, setDraft }) {
+function CorridorIntelligence(props) {
+  const [view, setView] = useState("explore");
+  const [compareIds, setCompareIds] = useState(() => [props.selected.corridor_id]);
+  const toggleCompare = (id) => setCompareIds((ids) => ids.includes(id) ? ids.filter((item) => item !== id) : ids.length < 3 ? [...ids, id] : ids);
+  const compared = props.data.corridors.filter((c) => compareIds.includes(c.corridor_id));
+  const highestRanked = [...compared].sort((a,b) => a.rank_baseline-b.rank_baseline)[0];
+  const highestNeed = [...compared].sort((a,b) => b.medical_accessibility_need_score-a.medical_accessibility_need_score)[0];
+  return <section className="intelligence-page">
+    <div className="subnav" role="tablist">
+      <button className={view === "explore" ? "active" : ""} onClick={() => setView("explore")}>Corridor detail</button>
+      <button className={view === "prioritize" ? "active" : ""} onClick={() => setView("prioritize")}>Priority matrix & ranking</button>
+      <button className={view === "compare" ? "active" : ""} onClick={() => setView("compare")}>Compare ({compareIds.length}/3)</button>
+    </div>
+    {view === "explore" && <CorridorExplorer {...props} compareIds={compareIds} toggleCompare={toggleCompare} />}
+    {view === "prioritize" && <Prioritization {...props} />}
+    {view === "compare" && <div className="comparison-workspace">
+      <div className="comparison-picker">{props.data.corridors.map((c) => <label key={c.corridor_id}><input type="checkbox" checked={compareIds.includes(c.corridor_id)} onChange={() => toggleCompare(c.corridor_id)} disabled={!compareIds.includes(c.corridor_id) && compareIds.length >= 3}/><span>#{c.rank_baseline} {c.destination_commune_old}</span></label>)}</div>
+      <div className="comparison-analysis">{compared.length > 0 && <><div className="comparison-cards">{compared.map((c) => <article key={c.corridor_id} className="compare-card"><span>Rank #{c.rank_baseline}</span><h3>{c.destination_commune_old}</h3><Badge className={c.final_classification_baseline}>{displayClass(c.final_classification_baseline)}</Badge><div className="compact-score-list">{[["Healthcare need",c.medical_accessibility_need_score,false],["UAV benefit",c.uav_benefit_score,false],["Flight feasibility",c.flight_feasibility_score,false],["Operational risk",c.operational_risk_score,true],["Overall priority",c.priority_score_baseline,false]].map(([label,value,risk]) => <div key={label}><span>{label}{risk&&<small>higher = more risk</small>}</span><strong>{fmt(value,3)}</strong><i className={risk?"risk":""} style={{width:`${value*100}%`}}/></div>)}</div><div className="compare-time"><span>{fmt(c.road_time_base_min,1)} min road</span><ArrowRight size={14}/><strong>{fmt(c.uav_mission_time_base_min,1)} min UAV</strong></div><button className="context-action inline" onClick={() => { props.setSelectedId(c.corridor_id); props.setDraft(null); props.setScreen("decision"); }}>Evaluate this Mission</button></article>)}</div><div className="comparison-insight"><strong>Comparative insight</strong><p>{highestRanked.corridor_id === highestNeed.corridor_id ? `${highestRanked.destination_commune_old} is both the highest-ranked and highest-need corridor in this comparison.` : `${highestNeed.destination_commune_old} has the highest healthcare-need score (${fmt(highestNeed.medical_accessibility_need_score,3)}), while ${highestRanked.destination_commune_old} has the best overall rank (#${highestRanked.rank_baseline}).`} Overall priority also reflects the exported UAV-benefit, feasibility, and operational-risk evidence; the available files do not support attributing the rank gap to one factor alone.</p></div></>}</div>
+    </div>}
+  </section>;
+}
+
+function CorridorExplorer({ data, selected, setSelectedId, setScreen, setDraft, compareIds = [], toggleCompare }) {
   const [query, setQuery] = useState("");
   const filtered = data.corridors.filter((c) => c.destination_commune_old.toLowerCase().includes(query.toLowerCase()));
   return (
@@ -1055,25 +1080,28 @@ function CorridorExplorer({ data, selected, setSelectedId, setScreen, setDraft }
         <div className="air-picture">
           <InsightCard label="Road detour" value={`${fmt(selected.detour_ratio, 2)}x`} note="Road distance relative to direct path" />
           <ArrowRight size={18} />
-          <InsightCard label="Direct air path" value={`${fmt(selected.candidate_aerial_distance_km, 1)} km`} note="Modeled direct UAV path" />
+          <InsightCard label="Straight-line geographic distance" value={`${fmt(selected.straight_distance_km, 1)} km`} note="Geodesic distance between facility coordinates" />
           <ArrowRight size={18} />
           <InsightCard label="Time benefit" value={`${fmt(selected.time_saved_base_min, 1)} min`} note={`${pct(selected.time_saved_base_pct)} modeled reduction`} />
         </div>
         <ScoreGrid selected={selected} expanded />
-        <button className="context-action inline" onClick={() => { setDraft(null); setScreen("mission"); }}>Use as Mission Template</button>
+        {toggleCompare && <button className="secondary-action" onClick={() => toggleCompare(selected.corridor_id)}>{compareIds.includes(selected.corridor_id) ? "Remove from comparison" : "Add to comparison"}</button>}
+        <button className="context-action inline" onClick={() => { setDraft(null); setScreen("decision"); }}>Evaluate this Mission</button>
       </main>
     </section>
   );
 }
 
 function RoadAirGraphic({ selected }) {
-  const maxDistance = Math.max(selected.road_distance_km, selected.candidate_aerial_distance_km, 1);
-  const maxTime = Math.max(selected.road_time_base_min, selected.uav_mission_time_base_min, 1);
+  const baseline = corridorBaselineMetrics(selected);
+  const maxDistance = Math.max(baseline.roadNetworkDistanceKm, baseline.modeledFlightDistanceKm, baseline.straightLineDistanceKm, 1);
+  const maxTime = Math.max(baseline.roadTimeMinutes, baseline.uavTimeMinutes, 1);
   const rows = [
-    ["Road distance", selected.road_distance_km, "km", "Road distance is modeled from available network analysis, but no route polyline is available.", maxDistance, "road"],
-    ["Aerial distance", selected.candidate_aerial_distance_km, "km", "Candidate aerial distance applies the project aerial route factor.", maxDistance, "air"],
-    ["Road time", selected.road_time_base_min, "min", "Modeled road travel time from project routing assumptions.", maxTime, "road"],
-    ["UAV mission time", selected.uav_mission_time_base_min, "min", "Modeled UAV mission time using the project base cruise speed and fixed mission time.", maxTime, "air"]
+    ["Road-network distance", baseline.roadNetworkDistanceKm, "km", "Precomputed distance from the project road-network model; no route polyline is available.", maxDistance, "road"],
+    ["Straight-line geographic distance", baseline.straightLineDistanceKm, "km", "Geodesic distance between the origin and destination coordinates.", maxDistance, "air"],
+    ["Modeled flight distance", baseline.modeledFlightDistanceKm, "km", `Straight-line distance multiplied by the ${fmt(baseline.detourFactor,2)} flight detour factor.`, maxDistance, "air"],
+    ["Modeled road time", baseline.roadTimeMinutes, "min", "Precomputed travel time from project road-network assumptions.", maxTime, "road"],
+    ["Modeled UAV mission time", baseline.uavTimeMinutes, "min", "Modeled flight distance at baseline speed plus fixed handling time.", maxTime, "air"]
   ];
   return (
     <div className="bar-card">
@@ -1103,7 +1131,7 @@ function Prioritization({ data, selected, setSelectedId, setScreen }) {
           <strong>HIGHEST NEED != HIGHEST DEPLOYMENT PRIORITY</strong>
           <span>Prioritization balances healthcare need, UAV benefit, flight feasibility, and operational risk using the project methodology.</span>
         </div>
-        <button className="context-action inline" onClick={() => setScreen("planner")}>Plan mission</button>
+        <button className="context-action inline" onClick={() => setScreen("decision")}>Evaluate selected corridor</button>
       </main>
       <RankTable data={data} selected={selected} setSelectedId={selectFromPriority} />
     </section>
@@ -1464,7 +1492,7 @@ function ScenarioLab({ data, selected, setSelectedId, setScreen }) {
           </button>
         ))}
         <RankStability data={data} selected={selected} setSelectedId={setSelectedId} />
-        <button className="context-action inline" onClick={() => setScreen("planner")}>Plan selected corridor</button>
+        <button className="context-action inline" onClick={() => setScreen("decision")}>Evaluate selected corridor</button>
       </aside>
     </section>
   );
@@ -1574,7 +1602,7 @@ function SeasonalOperations({ data, selected, setSelectedId, setScreen, planning
           <span>Planning interpretation</span>
           <strong>{seasonalOverlayText(selected, selectedMonth, data.weather)}</strong>
         </div>
-        <button onClick={() => setScreen("planner")}>Return to Mission Planner</button>
+        <button onClick={() => setScreen("decision")}>Open in Decision Workspace</button>
       </section>
     </section>
   );
@@ -1769,5 +1797,52 @@ function SectionTitle({ eyebrow, title, compact = false }) {
   return <div className={compact ? "section-title compact" : "section-title"}><span>{eyebrow}</span><h2>{title}</h2></div>;
 }
 
-function ScenarioWorkspace(props) { return <><MissionWorkspace {...props} scenario /><details className="legacy-scenarios"><summary data-native-language="true">{props.lang === "vi" ? "Độ nhạy xếp hạng tuyến hiện có" : "Existing corridor ranking sensitivity"}</summary><ScenarioLab {...props}/></details></>; }
+function ScenarioStudio({ data, selected, setSelectedId, setScreen, draft, setDraft, lang }) {
+  const [mode, setMode] = useState("operational");
+  const draftMatchesSelection = draft && draft.originId === selected.origin_id && draft.destinationId === selected.destination_id;
+  const baselineForm = useMemo(() => ({...defaults, ...(draftMatchesSelection ? draft : {}), originId:selected.origin_id, destinationId:selected.destination_id}), [selected.corridor_id, draft, draftMatchesSelection]);
+  const [params, setParams] = useState(() => ({...defaults}));
+  useEffect(() => setParams({...defaults, ...Object.fromEntries(Object.keys(defaults).filter((k) => baselineForm[k] !== undefined).map((k) => [k, baselineForm[k]]))}), [selected.corridor_id]);
+  const origin = data.health.find((f) => f.facility_id === baselineForm.originId) || data.health.find((f) => f.facility_id === selected.origin_id);
+  const destination = data.health.find((f) => f.facility_id === baselineForm.destinationId) || data.health.find((f) => f.facility_id === selected.destination_id);
+  const base = calculateMission({...defaults, origin, destination}, data.corridors);
+  const modified = calculateMission({...params, origin, destination}, data.corridors);
+  const recommendationChanged = base.recommendation !== modified.recommendation;
+  const constraintsChanged = base.violations.join(",") !== modified.violations.join(",");
+  const scenarioOptions = Object.entries(scenarioFields);
+  const [strategic, setStrategic] = useState("Baseline");
+  const rankField = scenarioFields[strategic];
+  const ranked = [...data.corridors].sort((a,b) => a[rankField] - b[rankField]);
+  const movers = ranked.map((c) => ({...c, movement:c.rank_baseline-c[rankField]}));
+  const risers = movers.filter((c) => c.movement>0).sort((a,b) => b.movement-a.movement);
+  const fallers = movers.filter((c) => c.movement<0).sort((a,b) => a.movement-b.movement);
+  const selectedMovement = selected.rank_baseline-selected[rankField];
+  const meta = scenarioMetadata[strategic];
+  const selectScenarioCorridor = (id) => {
+    const corridor = data.corridors.find((c) => c.corridor_id === id);
+    if (!corridor) return;
+    setSelectedId(id);
+    setDraft((current) => ({...defaults,...(current||{}),originId:corridor.origin_id,destinationId:corridor.destination_id,templateId:id}));
+  };
+  const t = (en,vi) => lang === "vi" ? vi : en;
+  return <section className="scenario-studio" data-native-language="true">
+    <div className="subnav" role="tablist"><button className={mode === "operational" ? "active" : ""} onClick={() => setMode("operational")}>{t("Operational what-if","Giả định vận hành")}</button><button className={mode === "strategic" ? "active" : ""} onClick={() => setMode("strategic")}>{t("Strategic prioritization","Ưu tiên chiến lược")}</button></div>
+    {mode === "operational" ? <div className="whatif-grid">
+      <aside className="whatif-controls"><h2>{t("Operational assumptions","Giả định vận hành")}</h2><label>{t("Corridor","Tuyến")}<select value={selected.corridor_id} onChange={(e) => selectScenarioCorridor(e.target.value)}>{data.corridors.map((c) => <option key={c.corridor_id} value={c.corridor_id}>#{c.rank_baseline} {c.destination_commune_old}</option>)}</select></label>{[
+        ["uavSpeedKmh","Cruise speed (km/h)",20,100,1],["detourFactor","Flight detour factor",1,2,.01],["handlingMinutes","Handling time (min)",0,60,1],["maxRangeKm","One-way range (km)",1,50,.5],["capacityKg","Payload capacity (kg)",.5,10,.1],["payloadKg","Payload weight (kg)",.1,10,.1]
+      ].map(([key,label,min,max,step]) => <label key={key}>{label}<div className="range-control"><input type="range" min={min} max={max} step={step} value={params[key]} onChange={(e) => setParams((p) => ({...p,[key]:Number(e.target.value)}))}/><input aria-label={label} type="number" min={min} max={max} step={step} value={params[key]} onChange={(e) => setParams((p) => ({...p,[key]:Number(e.target.value)}))}/></div></label>)}<button onClick={() => setParams({...defaults})}><RotateCcw size={15}/> {t("Reset to Baseline","Đặt lại cơ sở")}</button></aside>
+      <main className="whatif-results"><span className="eyebrow">{t("Baseline vs modified","Cơ sở và điều chỉnh")}</span><h2>{selected.destination_commune_old}</h2><div className="scenario-comparison-table"><div className="scenario-comparison-head"><span>{t("Metric","Chỉ số")}</span><strong>{t("Baseline","Cơ sở")}</strong><strong>{t("Modified","Điều chỉnh")}</strong><em>{t("Change","Thay đổi")}</em></div>{[["Modeled flight distance",base.flightDistanceKm,modified.flightDistanceKm," km"],["UAV mission time",base.uavTimeMinutes,modified.uavTimeMinutes," min"],["Potential time saved",base.minutesSaved,modified.minutesSaved," min"],["Time reduction",base.percentageSaved,modified.percentageSaved,"%"]].map(([label,a,b,unit]) => {const delta=a==null||b==null?null:b-a;return <div key={label} className={delta!==null&&Math.abs(delta)>.05?"changed":""}><span>{label}</span><strong>{a==null?"—":fmt(a,1,unit)}</strong><strong>{b==null?"—":fmt(b,1,unit)}</strong><em>{delta===null?"—":Math.abs(delta)<=.05?t("No change","Không đổi"):`${delta>0?"+":""}${fmt(delta,1,unit)}`}</em></div>})}</div><div className="constraint-compare"><div><span>{t("Baseline constraints","Giới hạn cơ sở")}</span><strong className={base.violations.length?"fail":"pass"}>{base.violations.length?`Fail: ${base.violations.join(", ")}`:"Pass"}</strong></div><ArrowRight size={17}/><div><span>{t("Modified constraints","Giới hạn điều chỉnh")}</span><strong className={modified.violations.length?"fail":"pass"}>{modified.violations.length?`Fail: ${modified.violations.join(", ")}`:"Pass"}</strong></div></div><div className={`recommendation-banner ${modified.recommendation}`}><span>{recommendationChanged?t("Recommendation changed","Khuyến nghị đã thay đổi"):t("Recommendation unchanged","Khuyến nghị không đổi")}</span><strong>{modified.recommendation === "high" ? "UAV Candidate — High Potential" : modified.recommendation === "conditional" ? "UAV Candidate — Conditional Pilot" : modified.recommendation === "infeasible" ? "Not Feasible Under Selected Constraints" : modified.recommendation === "road" ? "Road Preferred" : "Insufficient Data"}</strong><p>{recommendationChanged ? (modified.violations.length ? `The modified ${modified.violations.join(" and ")} constraint now fails.` : "The modeled travel-time relationship crossed a recommendation threshold.") : constraintsChanged ? "Constraint status changed, but the recommendation category did not." : "The recommendation and constraint status are stable under these assumptions."}</p></div><p className="evidence-note">Weather, terrain, healthcare need, and corridor scores are not recalculated because the supplied model defines no causal relationship from these controls.</p></main>
+    </div> : <div className="strategic-mode"><div className="scenario-explainer"><h2>{t("Validated decision scenarios","Các kịch bản quyết định đã xác thực")}</h2><p>{t("The repository does not include the executable weighting pipeline. To avoid inventing weights, this studio uses the four source-backed score and rank scenarios exactly as exported.","Kho mã không có quy trình trọng số có thể chạy. Để không tạo trọng số giả, studio sử dụng đúng bốn kịch bản điểm và hạng trong dữ liệu xuất.")}</p><div className="scenario-buttons">{scenarioOptions.map(([name]) => <button className={strategic === name ? "active" : ""} key={name} onClick={() => setStrategic(name)}>{name}</button>)}</div><div className="scenario-objective"><span>Research objective</span><strong>{meta.objective}</strong><small>Source: {meta.source}</small></div></div><div className="strategic-table"><table><thead><tr><th>Scenario rank</th><th>Corridor</th><th>Baseline</th><th>Movement</th><th>Scenario score</th><th>Need</th><th>Benefit</th><th>Feasibility</th><th>Risk ↑</th></tr></thead><tbody>{ranked.map((c) => {const scoreField = rankField.replace("rank_","priority_score_"); const move = c.rank_baseline-c[rankField]; return <tr key={c.corridor_id} className={c.corridor_id === selected.corridor_id ? "selected" : ""} onClick={() => setSelectedId(c.corridor_id)}><td>#{c[rankField]}</td><td>{c.destination_commune_old}</td><td>#{c.rank_baseline}</td><td className={move > 0 ? "rise" : move < 0 ? "fall" : ""}>{move > 0 ? `↑ ${move}` : move < 0 ? `↓ ${Math.abs(move)}` : "—"}</td><td>{fmt(c[scoreField],4)}</td><td>{fmt(c.medical_accessibility_need_score,3)}</td><td>{fmt(c.uav_benefit_score,3)}</td><td>{fmt(c.flight_feasibility_score,3)}</td><td>{fmt(c.operational_risk_score,3)}</td></tr>})}</tbody></table></div><div className="ranking-explanation"><h3>Why did rankings change?</h3><div><p><strong>Largest risers:</strong> {risers.length?risers.slice(0,3).map((c)=>`${c.destination_commune_old} (+${c.movement})`).join(", "):"No corridors rise in this scenario."}</p><p><strong>Largest fallers:</strong> {fallers.length?fallers.slice(0,3).map((c)=>`${c.destination_commune_old} (${c.movement})`).join(", "):"No corridors fall in this scenario."}</p></div><p>{meta.cue}</p><p><strong>{selected.destination_commune_old}:</strong> {selectedMovement>0?`rises ${selectedMovement} place${selectedMovement===1?"":"s"}`:selectedMovement<0?`falls ${Math.abs(selectedMovement)} place${selectedMovement===-1?"":"s"}`:"does not move"}. Its available components are need {fmt(selected.medical_accessibility_need_score,3)}, benefit {fmt(selected.uav_benefit_score,3)}, feasibility {fmt(selected.flight_feasibility_score,3)}, and risk {fmt(selected.operational_risk_score,3)}. These are context for interpretation, not proof of the unpublished scenario formula.</p></div><RankStability data={data} selected={selected} setSelectedId={setSelectedId}/><button onClick={() => setStrategic("Baseline")}><RotateCcw size={15}/> Reset to Baseline</button><p className="mission-note">This is a sensitivity experiment, not an objectively optimal policy. Scenario scores and ranks are loaded from the research export; the browser does not recompute weights.</p></div>}
+  </section>;
+}
+
+function EvidenceMethodology(props) {
+  const [section, setSection] = useState("method");
+  return <section className="evidence-page">
+    <div className="subnav"><button className={section === "method" ? "active" : ""} onClick={() => setSection("method")}>Methods & sources</button><button className={section === "seasonal" ? "active" : ""} onClick={() => setSection("seasonal")}>Seasonal readiness</button><button className={section === "limits" ? "active" : ""} onClick={() => setSection("limits")}>Policy & limitations</button></div>
+    {section === "method" && <div className="method-page"><div className="workflow-diagram">{["Geographic data","Accessibility analysis","UAV modeling","Feasibility & risk","Multi-criteria priority","Recommendation"].map((item,i) => <React.Fragment key={item}><span>{item}</span>{i<5&&<ArrowRight size={17}/>}</React.Fragment>)}</div><div className="method-grid"><article><h2>How SkyBridge works</h2><MissionMethodology lang={props.lang}/></article><article><h2>Data source roles</h2><EvidenceGroup title="Externally sourced / input evidence" items={[["OpenStreetMap network","Preprocessed road metrics"],["WorldPop 2023","Proportional population estimate"],["Facility coordinates","Source provenance unverified"],["Monthly climate observations","Historical planning context"]]}/><EvidenceGroup title="Research outputs and assumptions" items={[["terrain-v2 corridor export","Precomputed scores and ranks"],["UAV speed / range / payload","Scenario assumptions"],["Mission recommendation","Deterministic V3 policy"]]}/></article></div></div>}
+    {section === "seasonal" && <SeasonalOperations {...props}/>} 
+    {section === "limits" && <div className="limits-grid"><article><h2>Policy context</h2><p>Điện Biên’s low-altitude sandbox context is evidence of a controlled policy opportunity. It is not authorization for a particular route, aircraft, operator, cargo, or flight.</p><p>Every candidate requires applicable airspace review, operator approval, current weather verification, aircraft and payload compatibility, and site validation.</p></article><article><h2>Material limitations</h2><ul><li>Facility coordinates have unverified source provenance; Ẳng Nưa uses a commune-centroid fallback.</li><li>No road-route geometry is supplied. Numerical road estimates are precomputed OSM-network model outputs.</li><li>UAV times are modeled estimates, not telemetry.</li><li>No live weather, aircraft telemetry, permit validation, or terrain-clearance routing is connected.</li><li>Weather evidence is district-level climatology, not route-specific aviation weather.</li><li>The full executable composite-weight pipeline is absent; source scores and scenario ranks are preserved rather than reverse-engineered.</li></ul></article></div>}
+  </section>;
+}
 createRoot(document.getElementById("root")).render(<App />);

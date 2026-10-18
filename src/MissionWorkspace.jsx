@@ -21,7 +21,7 @@ const fields=[
  ['detourFactor','Flight detour factor','Hệ số vòng đường bay',1,3,0.01],
  ['maxRangeKm','One-way range limit (km)','Giới hạn tầm bay một chiều (km)',0.1,500,0.1]
 ];
-export default function MissionWorkspace({data,selected,lang='en',draft,setDraft,setSelectedId,scenario=false}) {
+export default function MissionWorkspace({data,selected,lang='en',draft,setDraft,setSelectedId,setScreen,scenario=false}) {
  const t=(en,vi)=>lang==='vi'?vi:en, w=k=>words[k]?.[lang==='vi'?1:0]??k;
  const template=c=>({...defaults,originId:c.origin_id,destinationId:c.destination_id,customLat:'',customLon:'',templateId:c.corridor_id});
  const [form,setForm]=useState(()=>draft?.templateId===selected.corridor_id?draft:template(selected));
@@ -33,12 +33,13 @@ export default function MissionWorkspace({data,selected,lang='en',draft,setDraft
  const request={...form,origin,destination};
  const result=calculateMission(request,data.corridors);
  const baseline=calculateMission({...request,...defaults},data.corridors);
+ useEffect(()=>{if(result.corridor&&result.corridor.corridor_id!==selected.corridor_id)setSelectedId(result.corridor.corridor_id)},[result.corridor?.corridor_id,selected.corridor_id,setSelectedId]);
  const update=(key,value)=>setForm(f=>({...f,[key]:value}));
  const show=submitted||scenario;
  const submit=e=>{e.preventDefault();setBusy(true);setSubmitted(true);window.setTimeout(()=>setBusy(false),100)};
  const load=()=>{const example=data.corridors.find(c=>c.corridor_id==='HF001_HF004')??selected;setSelectedId(example.corridor_id);setForm(template(example));setSubmitted(false);};
  return <section className="mission-v2" data-native-language="true">
- <div className="mission-intro"><div><span className="eyebrow">SKYBRIDGE V2</span><h2>{t('Where do you need to deliver medical supplies?','Bạn cần vận chuyển vật tư y tế đến đâu?')}</h2><p>{t('Create a mission. Compare modeled travel times and review the evidence.','Tạo nhiệm vụ. So sánh thời gian mô hình và xem bằng chứng.')}</p></div><button type="button" onClick={load}>{t('Load Example Mission','Tải nhiệm vụ mẫu')}</button></div>
+ <div className="mission-intro"><div><span className="eyebrow">MEDICAL UAV DECISION INTELLIGENCE</span><h2>{t('Where is a medical delivery needed?','Nhu cầu giao hàng y tế ở đâu?')}</h2><p>{t('Compare road access with a modeled UAV alternative, then review feasibility, evidence, and limitations.','So sánh tiếp cận đường bộ với phương án UAV mô hình, sau đó xem khả thi, bằng chứng và giới hạn.')}</p></div><button type="button" onClick={load}>{t('Load Example Mission','Tải nhiệm vụ mẫu')}</button></div>
  <div className="mission-layout">
  <form className="mission-form" onSubmit={submit}>
  <h3>{t('Mission Request','Yêu cầu nhiệm vụ')}</h3>
@@ -53,40 +54,43 @@ export default function MissionWorkspace({data,selected,lang='en',draft,setDraft
  <label>{t('Urgency','Mức khẩn cấp')}<select value={form.urgency} onChange={e=>update('urgency',e.target.value)}>{[['routine','Routine','Thông thường'],['priority','Priority','Ưu tiên'],['emergency','Emergency','Khẩn cấp']].map(([id,en,vi])=><option key={id} value={id}>{t(en,vi)}</option>)}</select></label>
  <div className="mission-fields">{fields.map(([key,en,vi,min,max,step])=><label key={key}>{t(en,vi)}<input aria-label={t(en,vi)} type="number" required min={min} max={max} step={step} value={Number.isNaN(form[key])?'':form[key]} onChange={e=>update(key,e.target.value===''?NaN:Number(e.target.value))}/></label>)}</div>
  <p className="mission-note">{t('Aircraft limits are editable planning assumptions, not certified specifications. Weather and terrain scores remain inherited evidence.','Giới hạn UAV là giả định lập kế hoạch có thể sửa, không phải thông số được chứng nhận. Điểm thời tiết và địa hình là bằng chứng kế thừa.')}</p>
- <button className="mission-submit" disabled={busy}>{busy?t('Calculating…','Đang tính…'):t('Generate Recommendation','Tạo khuyến nghị')}</button>
+ <button className="mission-submit" disabled={busy}>{busy?t('Calculating…','Đang tính…'):t('Evaluate Mission','Đánh giá nhiệm vụ')}</button>
  <button type="button" onClick={()=>setForm(f=>({...f,...defaults}))}>{t('Reset to Baseline','Đặt lại cơ sở')}</button>
  </form>
  <div><MissionMap data={data} request={request} result={show&&!result.errors.length?result:null} pick={pick} onPick={p=>{setForm(f=>({...f,destinationId:'custom',customLat:p.lat.toFixed(6),customLon:p.lng.toFixed(6)}));setPick(false)}} lang={lang}/>
  <div className="mission-map-note">{t('Blue: origin · Orange: destination · Teal dashed: illustrative UAV path. Road geometry is unavailable in the supplied dataset; road estimates are shown numerically.','Xanh dương: điểm đi · Cam: điểm đến · Nét đứt xanh: đường UAV minh họa. Dữ liệu không có hình học tuyến đường bộ; chỉ hiển thị ước tính bằng số.')}</div>
  <p className="mission-note">{t('Facility coordinates have unverified source provenance. Map points are not validated operating sites. No live weather, telemetry, airspace approval or clinical performance validation.','Nguồn tọa độ cơ sở chưa được xác minh. Điểm bản đồ chưa phải vị trí vận hành được kiểm định. Không có thời tiết trực tiếp, giám sát bay, phê duyệt vùng trời hay xác nhận hiệu quả lâm sàng.')}</p>
  {show&&result.errors.length>0&&<div role="alert" className="mission-error">{result.errors.map(k=><p key={k}>{words[k]?w(k):t('Invalid value: ','Giá trị không hợp lệ: ')+(fields.find(f=>f[0]===k)?.[lang==='vi'?2:1]??k)}</p>)}</div>}
- {show&&!result.errors.length&&!busy&&<MissionResult result={result} baseline={baseline} t={t} w={w} scenario={scenario}/>}
+ {show&&!result.errors.length&&!busy&&<MissionResult result={result} baseline={baseline} t={t} w={w} scenario={scenario} setScreen={setScreen}/>}
  {!show&&<div className="mission-empty"><h3>{t('Your mission starts here','Nhiệm vụ bắt đầu tại đây')}</h3><p>{t('Select the endpoints and generate a recommendation. After submission, parameter changes update the results immediately.','Chọn điểm đi và đến rồi tạo khuyến nghị. Sau khi gửi, thay đổi tham số sẽ cập nhật kết quả ngay.')}</p></div>}
  </div></div></section>;
 }
-function MissionResult({result:r,baseline:b,t,w,scenario}) {
+function MissionResult({result:r,baseline:b,t,w,scenario,setScreen}) {
  const fmt=(v,s='')=>v===null?t('Unavailable','Không có dữ liệu'):v.toFixed(1)+s;
  return <section className={'mission-results '+r.recommendation} aria-live="polite">
- <span className="eyebrow">{t('Planning recommendation','Khuyến nghị lập kế hoạch')}</span><h2>{w(r.recommendation)}</h2>
- <div className="mission-metrics">{[
- [t('Road distance','Quãng đường bộ'),r.roadDistanceKm,' km'],
- [t('Straight-line aerial distance','Khoảng cách đường chim bay'),r.aerialDistanceKm,' km'],
- [t('Modeled flight distance','Quãng đường bay mô hình'),r.flightDistanceKm,' km'],
+ <div className="recommendation-heading"><div><span className="eyebrow">{t('Planning recommendation','Khuyến nghị lập kế hoạch')}</span><h2>{w(r.recommendation)}</h2></div><span className={`constraint-chip ${r.feasibilityStatus}`}>{r.feasibilityStatus==='failed'?t('Constraints failed','Không đạt giới hạn'):r.feasibilityStatus==='unknown'?t('Evidence incomplete','Thiếu bằng chứng'):t('Numerical constraints pass','Đạt giới hạn số học')}</span></div>
+ <div className="primary-mission-metrics">{[
  [t('Road travel time','Thời gian đường bộ'),r.roadTimeMinutes,' min'],
  [t('Modeled UAV Mission Time','Thời gian nhiệm vụ UAV mô hình'),r.uavTimeMinutes,' min'],
- [t('Minutes saved','Số phút tiết kiệm'),r.minutesSaved,' min'],
+ [t('Potential time saved','Thời gian có thể tiết kiệm'),r.minutesSaved,' min']
+ ].map(([label,value,unit])=><div key={label}><span>{label}</span><strong>{fmt(value,unit)}</strong></div>)}</div>
+ <details className="secondary-metrics"><summary>{t('Distance and efficiency details','Chi tiết khoảng cách và hiệu quả')}</summary><div className="mission-metrics">{[
+ [t('Road-network distance','Quãng đường mạng lưới đường bộ'),r.roadDistanceKm,' km'],
+ [t('Straight-line geographic distance','Khoảng cách địa lý đường thẳng'),r.aerialDistanceKm,' km'],
+ [t('Modeled flight distance','Quãng đường bay mô hình'),r.flightDistanceKm,' km'],
  [t('Time reduction','Giảm thời gian'),r.percentageSaved,' %'],
  [t('Road detour ratio','Tỷ lệ vòng đường bộ'),r.detourRatio,' ×']
- ].map(([label,value,unit])=><div key={label}><span>{label}</span><strong>{fmt(value,unit)}</strong></div>)}</div>
- <p><strong>{t('Constraint screen: ','Kiểm tra giới hạn: ')}</strong>{r.feasibilityStatus==='failed'?t('Failed','Không đạt'):r.feasibilityStatus==='unknown'?t('Insufficient supporting evidence','Thiếu bằng chứng hỗ trợ'):t('Selected limits pass; operational review required','Đạt giới hạn đã chọn; cần rà soát vận hành')}</p><h3>{t('Why this option?','Vì sao chọn phương án này?')}</h3>
+ ].map(([label,value,unit])=><div key={label}><span>{label}</span><strong>{fmt(value,unit)}</strong></div>)}</div></details>
+ <div className="constraint-summary"><strong>{t('Constraint & feasibility screen','Kiểm tra giới hạn và khả thi')}</strong><span>{r.feasibilityStatus==='failed'?t('Failed — review the violations below.','Không đạt — xem vi phạm bên dưới.'):r.feasibilityStatus==='unknown'?t('Supporting corridor evidence is incomplete.','Bằng chứng tuyến hỗ trợ chưa đầy đủ.'):t('Selected range and payload limits pass; operational review is still required.','Tầm bay và tải trọng đã chọn đạt; vẫn cần rà soát vận hành.')}</span></div><h3>{t('Why this recommendation?','Vì sao có khuyến nghị này?')}</h3>
  <ul><li>{r.minutesSaved===null?t('No matched road estimate is available; a comparative recommendation cannot be established.','Không có ước tính đường bộ phù hợp; chưa thể đưa ra khuyến nghị so sánh.'):r.minutesSaved>0?t('The selected UAV model is faster than the baseline road estimate.','Mô hình UAV đã chọn nhanh hơn ước tính đường bộ cơ sở.'):t('The selected UAV model is no faster than road transport.','Mô hình UAV đã chọn không nhanh hơn đường bộ.')}</li>
  <li>{r.violations.length?r.violations.map(k=>w(k)+(k==='range'?' ('+r.flightDistanceKm.toFixed(3)+' km > '+r.request.maxRangeKm+' km)':' ('+r.request.payloadKg+' kg > '+r.request.capacityKg+' kg)')).join(' '):t('Selected payload and one-way range limits pass the numerical screen; this does not establish safe flight.','Tải trọng và tầm bay một chiều vượt qua kiểm tra số học; điều này không xác nhận an toàn bay.')}</li>
  <li>{r.corridor?t('Exact facility-pair evidence is inherited from the terrain-v2 corridor dataset; urgency does not override constraints.','Bằng chứng đúng cặp cơ sở được kế thừa từ dữ liệu tuyến terrain-v2; mức khẩn cấp không ghi đè giới hạn.'):t('This location pair has no matching corridor evidence. Need, risk and feasibility scores are unavailable.','Cặp địa điểm không có bằng chứng tuyến phù hợp. Không có điểm nhu cầu, rủi ro và khả thi.')}</li></ul>
- <h3>{t('Potential limitations','Giới hạn tiềm ẩn')}</h3>
- <p>{t('Road figures are precomputed OSM-network model outputs, not current traffic. No road polyline is supplied. Terrain and climatological scores are not recomputed. Site verification, cargo compatibility and cold-chain requirements need operator review.','Số liệu đường bộ là kết quả mô hình mạng OSM tính sẵn, không phải giao thông hiện tại. Không có đường tuyến chi tiết. Điểm địa hình và khí hậu không được tính lại. Cần kiểm tra vị trí, tương thích hàng hóa và chuỗi lạnh.')}</p>
  <h3>{t('What would change this recommendation?','Điều gì sẽ thay đổi khuyến nghị?')}</h3>
  <p>{t('Try reducing range below','Thử giảm tầm bay dưới')} {fmt(r.flightDistanceKm,' km')}, {t('increasing payload above capacity, or increasing handling time. Break-even total handling time:','tăng tải trọng vượt sức chở hoặc tăng thời gian xử lý. Thời gian xử lý hòa vốn:')} {r.roadTimeMinutes===null?t('unavailable','không có dữ liệu'):fmt(r.roadTimeMinutes-r.flightDistanceKm/r.request.uavSpeedKmh*60,' min')}. {t('Urgency changes context only.','Mức khẩn cấp chỉ thay đổi bối cảnh.')}</p>
+ <details className="limitations-details"><summary>{t('Limitations and provenance','Giới hạn và nguồn dữ liệu')}</summary><p>{t('Road figures are precomputed OSM-network model outputs, not current traffic. No road polyline is supplied. Terrain and climatological scores are not recomputed. Site verification, cargo compatibility and cold-chain requirements need operator review.','Số liệu đường bộ là kết quả mô hình mạng OSM tính sẵn, không phải giao thông hiện tại. Không có đường tuyến chi tiết. Điểm địa hình và khí hậu không được tính lại. Cần kiểm tra vị trí, tương thích hàng hóa và chuỗi lạnh.')}</p>
  {r.corridor&&<details><summary>{t('Inherited corridor intelligence and provenance','Thông tin tuyến kế thừa và nguồn dữ liệu')}</summary><p>{r.corridor.destination_name} · {t('Baseline rank','Hạng cơ sở')} #{r.corridor.rank_baseline}</p><div className="mission-metrics">{[['medical_accessibility_need_score','Healthcare need','Nhu cầu y tế'],['uav_benefit_score','UAV benefit','Lợi ích UAV'],['flight_feasibility_score','Flight feasibility','Khả thi bay'],['operational_risk_score','Operational risk','Rủi ro vận hành'],['priority_score_baseline','Priority','Ưu tiên']].map(([k,en,vi])=><div key={k}><span>{t(en,vi)}</span><strong>{r.corridor[k]?.toFixed(3)??'—'}</strong></div>)}</div><p>{t('All these scores and ranks are inherited, not recalculated for this mission. Baseline export UAV time:','Tất cả điểm và hạng được kế thừa, không tính lại cho nhiệm vụ. Thời gian UAV trong bản xuất cơ sở:')} {r.corridor.uav_mission_time_base_min} min. {t('Dynamic results use unrounded arithmetic; small rounding differences are expected.','Kết quả động dùng số học chưa làm tròn; có thể có chênh lệch nhỏ.')}</p><code>{r.dataProvenance}</code></details>}
+ </details>
+ {setScreen&&<div className="demo-actions"><span>{t('Guided demo next steps','Bước tiếp theo của bản trình diễn')}</span><button onClick={()=>setScreen('intelligence')}>{t('Open corridor prioritization','Mở ưu tiên tuyến')}</button><button onClick={()=>setScreen('scenario')}>{t('Test operational sensitivity','Thử độ nhạy vận hành')}</button></div>}
  {scenario&&<><h3>{t('Baseline vs Modified Scenario','Cơ sở so với kịch bản điều chỉnh')}</h3><div className="mission-table"><table><thead><tr><th>{t('Metric','Chỉ số')}</th><th>{t('Baseline','Cơ sở')}</th><th>{t('Modified','Điều chỉnh')}</th></tr></thead><tbody>{[['uavTimeMinutes',t('UAV time (min)','Thời gian UAV (phút)')],['minutesSaved',t('Minutes saved','Phút tiết kiệm')]].map(([k,label])=><tr key={k}><th>{label}</th><td>{fmt(b[k])}</td><td>{fmt(r[k])}</td></tr>)}<tr><th>{t('Recommendation','Khuyến nghị')}</th><td>{w(b.recommendation)}</td><td>{w(r.recommendation)}</td></tr><tr><th>{t('Constraint violations','Vi phạm giới hạn')}</th><td>{b.violations.map(w).join(' ')||'—'}</td><td>{r.violations.map(w).join(' ')||'—'}</td></tr></tbody></table></div></>}
  </section>;
 }
@@ -117,11 +121,11 @@ function MissionMap({data,request,result,pick,onPick,lang}) {
 export function MissionMethodology({lang='en'}) {
  const t=(en,vi)=>lang==='vi'?vi:en;
  return <section data-native-language="true">
- <h3>{t('V2 dynamic mission model','Mô hình nhiệm vụ động V2')}</h3>
+ <h3>{t('V3 dynamic mission model','Mô hình nhiệm vụ động V3')}</h3>
  <p>{t('UAV minutes = straight-line km × detour factor ÷ cruise km/h × 60 + total handling minutes. Baseline: 1.10, 50 km/h and 5 min. Range checks use modeled flight distance, not straight-line distance.','Phút UAV = km đường chim bay × hệ số vòng ÷ tốc độ km/h × 60 + tổng phút xử lý. Cơ sở: 1,10; 50 km/h; 5 phút. Kiểm tra tầm bay dùng quãng đường bay mô hình.')}</p>
  <p>{t('Road figures are inherited OSM network model outputs for the exact directional facility pair. Network edge speeds and processing code are absent, so road time cannot be independently reproduced here. Other pairs return unavailable road estimates.','Số liệu đường bộ được kế thừa từ mô hình mạng OSM cho đúng cặp cơ sở có hướng. Không có tốc độ cạnh mạng và mã xử lý để tái tạo thời gian đường bộ. Các cặp khác không có ước tính.')}</p>
  <p>{t('Healthcare need = 0.60 × normalized operational access gap + 0.40 × normalized proportional 2023 population. UAV benefit = 0.50 × normalized percentage saved + 0.30 × normalized minutes saved + 0.20 × normalized detour ratio. These exported scores are not dynamically renormalized.','Nhu cầu y tế = 0,60 × khoảng trống tiếp cận chuẩn hóa + 0,40 × dân số 2023 phân bổ tỷ lệ chuẩn hóa. Lợi ích UAV = 0,50 × tỷ lệ tiết kiệm chuẩn hóa + 0,30 × phút tiết kiệm chuẩn hóa + 0,20 × tỷ lệ vòng đường chuẩn hóa. Điểm xuất sẵn không được chuẩn hóa lại động.')}</p>
- <p>{t('Feasibility, operational risk and priority weights are inherited from the terrain-v2 export. The full weighting pipeline is absent; V2 introduces no replacement scoring weights. Earlier exports remain in the data folder and can differ in terrain feasibility and rank.','Khả thi, rủi ro vận hành và trọng số ưu tiên được kế thừa từ bản xuất terrain-v2. Không có đầy đủ quy trình tính trọng số; V2 không đưa ra trọng số thay thế. Bản xuất cũ được giữ trong thư mục dữ liệu và có thể khác về khả thi địa hình và hạng.')}</p>
+ <p>{t('Feasibility, operational risk and priority weights are inherited from the terrain-v2 export. The full weighting pipeline is absent; V3 introduces no replacement scoring weights. Earlier exports remain in the data folder and can differ in terrain feasibility and rank.','Khả thi, rủi ro vận hành và trọng số ưu tiên được kế thừa từ bản xuất terrain-v2. Không có đầy đủ quy trình tính trọng số; V3 không đưa ra trọng số thay thế. Bản xuất cũ được giữ trong thư mục dữ liệu và có thể khác về khả thi địa hình và hạng.')}</p>
  <p>{t('Provenance: facility/geographic source records → precomputed road and corridor models → dynamically calculated UAV times and constraint checks → user-entered aircraft assumptions. Exact facility IDs plus coordinates within 20 m are required to inherit corridor evidence. Arbitrary points never inherit healthcare need.','Nguồn dữ liệu: cơ sở/địa lý → mô hình đường bộ và tuyến tính sẵn → thời gian UAV và kiểm tra giới hạn tính động → giả định UAV do người dùng nhập. Cần đúng mã cơ sở và tọa độ trong 20 m để kế thừa bằng chứng tuyến. Điểm tùy chọn không kế thừa nhu cầu y tế.')}</p>
  <p>{t('Decision policy: violated constraints → infeasible; missing evidence → insufficient data; no time benefit → road; positive benefit plus baseline LAUNCH → high potential; otherwise conditional pilot. These are proposed planning rules, not flight approval or clinical validation.','Quy tắc: vi phạm giới hạn → không khả thi; thiếu bằng chứng → không đủ dữ liệu; không lợi thời gian → đường bộ; có lợi và cơ sở LAUNCH → tiềm năng cao; còn lại thí điểm có điều kiện. Đây là quy tắc lập kế hoạch đề xuất, không phải phê duyệt bay hay xác nhận lâm sàng.')}</p>
  </section>;

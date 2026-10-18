@@ -1,6 +1,6 @@
-# SkyBridge V2
+# SkyBridge V3 — Medical UAV Decision Intelligence
 
-Interactive medical UAV planning for Mường Ảng, Điện Biên. Create a mission, compare modeled road/UAV times, check payload and range, inspect explanations, reuse corridor templates and compare scenarios in English or Vietnamese.
+Evidence-based medical UAV corridor planning for Mường Ảng, Điện Biên. V3 unifies mission evaluation, corridor prioritization, operational and strategic sensitivity, and research evidence in four connected workspaces while preserving the established SkyBridge design and terrain-v2 outputs.
 
 This is a research planning prototype, not operational dispatch or flight authorization.
 
@@ -26,6 +26,7 @@ Browser tests require Playwright Chromium or an installed Edge browser. PowerShe
 ## Evidence and deployment
 
 - [Architecture and data audit](V2_AUDIT.md)
+- [V3 implementation report](V3_IMPLEMENTATION_REPORT.md)
 - [Local operation, demo and existing Render update instructions](V2_RUNBOOK.md)
 - [Verification results](V2_TEST_RESULTS.md)
 

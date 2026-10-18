@@ -3,6 +3,21 @@ export function distance(a,b) {
  const r=Math.PI/180;
  return 12742*Math.asin(Math.min(1,Math.sqrt(Math.sin((b.lat-a.lat)*r/2)**2+Math.cos(a.lat*r)*Math.cos(b.lat*r)*Math.sin((b.lon-a.lon)*r/2)**2)));
 }
+export function corridorBaselineMetrics(corridor) {
+ if(!corridor) return null;
+ const straightLineDistanceKm=Number.isFinite(corridor.straight_distance_km)?corridor.straight_distance_km:null;
+ const detourFactor=Number.isFinite(corridor.aerial_route_factor)?corridor.aerial_route_factor:defaults.detourFactor;
+ const modeledFlightDistanceKm=Number.isFinite(corridor.candidate_aerial_distance_km)?corridor.candidate_aerial_distance_km:straightLineDistanceKm===null?null:straightLineDistanceKm*detourFactor;
+ return {
+  straightLineDistanceKm,
+  modeledFlightDistanceKm,
+  roadNetworkDistanceKm:Number.isFinite(corridor.road_distance_km)?corridor.road_distance_km:null,
+  roadTimeMinutes:Number.isFinite(corridor.road_time_base_min)?corridor.road_time_base_min:null,
+  uavTimeMinutes:Number.isFinite(corridor.uav_mission_time_base_min)?corridor.uav_mission_time_base_min:null,
+  minutesSaved:Number.isFinite(corridor.time_saved_base_min)?corridor.time_saved_base_min:null,
+  detourFactor
+ };
+}
 export function calculateMission(request,corridors) {
  const q={...defaults,...request}, errors=[];
  for(const [key,min,max] of [['payloadKg',0.01,100],['capacityKg',0.01,100],['uavSpeedKmh',1,200],['handlingMinutes',0,240],['detourFactor',1,3],['maxRangeKm',0.1,500]]) if(!Number.isFinite(q[key])||q[key]<min||q[key]>max) errors.push(key);
